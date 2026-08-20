@@ -115,7 +115,7 @@
     }
     .album-art {
       width: 60px; height: 60px; border-radius: 16px; flex-shrink: 0;
-      background: url('logo.png?q=80&w=200&auto=format&fit=crop') center/cover;
+      background: url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=200&auto=format&fit=crop') center/cover;
       box-shadow: var(--elevation-2); transition: background-image 0.5s ease;
     }
     .player-controls { flex-grow: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -238,6 +238,11 @@
 
   <!-- HIDDEN YOUTUBE PLAYER -->
   <div id="youtube-player" style="display: none;"></div>
+
+  <!-- SILENT WAKE-LOCK AUDIO HACK -->
+  <audio id="bgKeepAlive" loop style="display:none;">
+    <source src="data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
+  </audio>
 
   <div class="overlay"></div>
 
@@ -381,8 +386,17 @@
       if (!('mediaSession' in navigator)) return;
       navigator.mediaSession.setActionHandler('play', () => player && player.playVideo());
       navigator.mediaSession.setActionHandler('pause', () => player && player.pauseVideo());
+      navigator.mediaSession.setActionHandler('stop', () => {
+        if (player) player.pauseVideo();
+      });
       navigator.mediaSession.setActionHandler('previoustrack', () => prevTrack());
       navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack());
+      
+      try {
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (player && details.seekTime) player.seekTo(details.seekTime, true);
+        });
+      } catch(e) {}
     }
 
     function updateMediaSessionMetadata(videoData) {
@@ -403,6 +417,10 @@
         isPlaying = true;
         playBtn.innerText = '❚❚';
         playBtn.style.paddingLeft = '0';
+        
+        const keepAlive = document.getElementById('bgKeepAlive');
+        if (keepAlive) keepAlive.play().catch(e => {});
+
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
 
         if (playlistIds.length === 0) {
@@ -427,6 +445,10 @@
         isPlaying = false;
         playBtn.innerText = '▶';
         playBtn.style.paddingLeft = '3px';
+        
+        const keepAlive = document.getElementById('bgKeepAlive');
+        if (keepAlive) keepAlive.pause();
+
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
       }
     }
@@ -648,7 +670,6 @@
 
     function renderMetroList() {
       document.getElementById('metroContainer').innerHTML = pandals.map(p => {
-        // Encode the metro station name and append "Kolkata" for a more accurate map search
         const metroQuery = encodeURIComponent(p.metro + ', Kolkata');
         return `
         <div class="pandal-card">
@@ -660,6 +681,19 @@
         </div>`;
       }).join('');
     }
+  </script>
+
+  <script>
+    // Visibility listener to ensure player stays awake if hidden
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && isPlaying && player) {
+        setTimeout(() => {
+          if (isPlaying && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+            player.playVideo();
+          }
+        }, 300);
+      }
+    });
   </script>
 
   <script>
