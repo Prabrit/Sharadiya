@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sharadiya | Lo-Fi Pujo Experience</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tiro+Bangla:ital@0;1&family=Baloo+Da+2:wght@500;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.12);
+      --glass-border: rgba(255, 255, 255, 0.22);
+      --text-main: #FFFFFF;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --accent-gold: #D4AF37;
+      --primary-crimson: #A91D22;
+
+      /* Material-ish surface tokens, tinted to the festive palette */
+      --surface-container: rgba(32, 14, 16, 0.6);
+      --surface-container-high: rgba(48, 18, 21, 0.8);
+      --state-hover: rgba(255, 255, 255, 0.08);
+      --state-press: rgba(255, 255, 255, 0.14);
+      --elevation-2: 0 1px 3px rgba(0,0,0,.35), 0 4px 10px rgba(0,0,0,.28);
+      --elevation-4: 0 2px 4px rgba(0,0,0,.3), 0 10px 26px rgba(0,0,0,.38);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text-main);
+      height: 100vh; width: 100vw; overflow: hidden;
+
+      /* DEFAULT PC/DESKTOP BACKGROUND (Local File) */
+      background-image: url('chokhudan.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    /* RESPONSIVE MOBILE BACKGROUND (Local File) */
+    @media (max-width: 768px) {
+      body {
+        background-image: url('Sakti.png');
+      }
+    }
+
+    .overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.6) 100%);
+      z-index: 1;
+    }
+
+    .ui-container {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 40px;
+    }
+
+    /* Top HUD */
+    .top-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+
+    /* "A Note" pill — replaces the old status pill, links to message.html */
+    .note-pill {
+      position: relative;
+      display: flex; align-items: center; gap: 8px;
+      background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+      padding: 7px 16px 7px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+      color: #fff; text-decoration: none; cursor: pointer; overflow: hidden;
+      transition: background .2s ease, transform .2s ease;
+    }
+    .note-pill:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+    .note-pill:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+    .note-icon { color: var(--accent-gold); filter: drop-shadow(0 0 4px rgba(212,175,55,.6)); flex-shrink: 0; }
+    .note-badge {
+      position: absolute; top: 5px; right: 8px;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #4ADE80; box-shadow: 0 0 6px #4ADE80;
+      animation: pulse-badge 2s infinite;
+    }
+    @keyframes pulse-badge { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+    .clock { font-weight: 500; font-size: 0.9rem; letter-spacing: 1px; }
+
+    /* Center Header & View Switcher */
+    .center-title {
+      position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+      text-align: center; width: 90%; max-width: 500px;
+    }
+    .bengali-title { font-family: 'Tiro Bangla', serif; font-size: 4.8rem; text-shadow: 2px 4px 12px rgba(0,0,0,0.4); margin-bottom: -10px;}
+    .english-subtitle { font-size: 1.1rem; letter-spacing: 4px; opacity: 0.9; margin-bottom: 25px; }
+
+    .view-switcher {
+      display: flex; justify-content: center; gap: 10px;
+      background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(12px);
+      padding: 5px; border-radius: 30px; border: 1px solid var(--glass-border);
+    }
+    .switch-btn {
+      position: relative; overflow: hidden;
+      background: none; border: none; color: var(--text-muted);
+      padding: 8px 20px; border-radius: 20px; font-weight: 600;
+      font-size: 0.85rem; cursor: pointer; transition: all 0.3s;
+    }
+    .switch-btn.active { background: rgba(255, 255, 255, 0.25); color: #FFF; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .switch-btn:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+
+    /* Bottom Main Area */
+    .bottom-area {
+      margin-top: auto; margin-bottom: 6vh; display: flex; flex-direction: column; gap: 15px;
+      max-width: 650px; margin-left: auto; margin-right: auto; width: 100%;
+    }
+
+    .views-wrapper { width: 100%; }
+    .view-panel { display: none; }
+    .view-panel.active { display: block; }
+
+    /* ============ MATERIAL DESIGN MUSIC BAR ============ */
+    .glass-player {
+      background: linear-gradient(160deg, var(--surface-container-high), var(--surface-container));
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 28px;
+      padding: 12px 14px 12px 12px;
+      display: flex; align-items: center; gap: 16px;
+      box-shadow: var(--elevation-4);
+    }
+    .album-art {
+      width: 60px; height: 60px; border-radius: 16px; flex-shrink: 0;
+      background: url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=200&auto=format&fit=crop') center/cover;
+      box-shadow: var(--elevation-2); transition: background-image 0.5s ease;
+    }
+    .player-controls { flex-grow: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .track-info-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.85rem; }
+    .track-title { font-weight: 600; font-size: .92rem; letter-spacing: .1px; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .track-time { color: var(--text-muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+    /* Material 3 style linear progress indicator */
+    .progress-bar {
+      width: 100%; height: 4px; background: rgba(255,255,255,0.18);
+      border-radius: 2px; position: relative; cursor: pointer;
+    }
+    .progress-fill {
+      height: 100%; width: 0%; background: var(--accent-gold);
+      border-radius: 2px; position: relative; transition: width 0.5s linear;
+    }
+    .progress-fill::after {
+      content: ''; position: absolute; right: -3px; top: 50%; transform: translateY(-50%);
+      width: 8px; height: 8px; border-radius: 50%; background: var(--accent-gold);
+      box-shadow: 0 0 6px rgba(212,175,55,.7);
+    }
+
+    .btn-row { display: flex; align-items: center; gap: 8px; }
+
+    /* Material icon buttons (prev/next) with state-layer ripple */
+    .ctrl-btn {
+      position: relative; overflow: hidden;
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: white; cursor: pointer;
+      opacity: 0.85; font-size: 1.1rem; transition: background .2s ease, opacity .2s ease;
+    }
+    .ctrl-btn:hover { background: var(--state-hover); opacity: 1; }
+    .ctrl-btn:active { background: var(--state-press); }
+    .ctrl-btn:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+
+    /* Filled Icon Button / small FAB for play-pause */
+    .play-btn {
+      position: relative; overflow: hidden;
+      width: 50px; height: 50px; background: var(--accent-gold); color: #2A1400; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem; padding-left: 3px;
+      box-shadow: var(--elevation-2); transition: transform .15s ease, box-shadow .2s ease;
+    }
+    .play-btn:hover { transform: scale(1.05); box-shadow: var(--elevation-4); }
+    .play-btn:active { transform: scale(.95); }
+    .play-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+    /* Tonal icon button for the playlist menu */
+    .menu-btn {
+      position: relative; overflow: hidden;
+      background: rgba(255,255,255,0.08); border: none;
+      color: white; width: 44px; height: 62px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.2s; flex-shrink: 0; font-size: 1.2rem;
+    }
+    .menu-btn:hover { background: rgba(255,255,255,0.16); }
+    .menu-btn:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+
+    /* Ripple (state layer expansion) used across the bar's interactive elements */
+    .ripple {
+      position: absolute; border-radius: 50%; transform: scale(0);
+      background: rgba(255,255,255,.5); animation: ripple-anim .55s ease-out; pointer-events: none;
+    }
+    .ripple.ripple-dark { background: rgba(0,0,0,.28); }
+    @keyframes ripple-anim { to { transform: scale(2.8); opacity: 0; } }
+
+    /* Parikrama Map List Panel */
+    .pandal-list-panel {
+      background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border);
+      border-radius: 20px; padding: 18px; max-height: 280px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .pandal-card {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; background: rgba(0,0,0,0.3);
+      border-radius: 10px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .pandal-card h4 { font-size: 0.95rem; }
+    .pandal-card p { font-size: 0.8rem; color: var(--text-muted); }
+    .route-btn { background: var(--primary-crimson); color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
+
+    /* Footer Styling */
+    .footer {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      font-size: 0.82rem; font-weight: 500; color: rgba(255, 255, 255, 0.8);
+      letter-spacing: 0.5px; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      pointer-events: none; z-index: 5;
+    }
+
+    /* Slide-out Playlist Drawer */
+    .drawer {
+      position: fixed; top: 0; right: -380px; width: 350px; height: 100%;
+      background: rgba(20, 10, 12, 0.9); backdrop-filter: blur(20px);
+      border-left: 1px solid var(--glass-border); z-index: 10;
+      padding: 25px; transition: right 0.3s ease; display: flex; flex-direction: column; gap: 15px;
+    }
+    .drawer.open { right: 0; }
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; }
+    .close-btn { background: none; border: none; color: #FFF; font-size: 1.5rem; cursor: pointer; }
+
+    .playlist-items { overflow-y: auto; max-height: calc(100vh - 100px); display: flex; flex-direction: column; gap: 8px; }
+    .playlist-item {
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; gap: 12px; padding: 8px 10px;
+      background: rgba(255,255,255,0.05); border-radius: 14px; cursor: pointer; border: 1px solid transparent; transition: 0.2s;
+    }
+    .playlist-item:hover { background: rgba(255,255,255,0.12); border-color: var(--glass-border); }
+    .playlist-item.active { background: rgba(212, 175, 55, 0.2); border-color: var(--accent-gold); }
+    .playlist-thumb { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; }
+    .playlist-info h5 { font-size: 0.85rem; font-weight: 600; line-height: 1.2; }
+    .playlist-info p { font-size: 0.75rem; color: var(--text-muted); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ripple, .note-badge, .play-btn, .progress-fill, .switch-btn, .note-pill { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HIDDEN YOUTUBE PLAYER -->
+  <div id="youtube-player" style="display: none;"></div>
+
+  <div class="overlay"></div>
+
+  <div class="ui-container">
+    <nav class="top-bar">
+      <a href="message.html" class="note-pill" onclick="rippleNav(event)" title="A little note from Prabrit" aria-label="Read a note from Prabrit">
+        <svg class="note-icon" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M9 3v10.55A4 4 0 1 0 11 17V7h6V3H9z"/>
+        </svg>
+        <span>A Note</span>
+        <span class="note-badge"></span>
+      </a>
+      <div class="clock" id="liveClock">8:51 PM</div>
+    </nav>
+
+    <div class="center-title">
+      <h1 class="bengali-title">শারদীয়া</h1>
+      <h2 class="english-subtitle">sharadiya</h2>
+      <div class="view-switcher">
+        <button class="switch-btn active" onclick="switchMode('player', this, event)">Sangeet Player</button>
+        <button class="switch-btn" onclick="switchMode('parikrama', this, event)">Pujo Parikrama</button>
+      </div>
+    </div>
+
+    <div class="bottom-area">
+      <div class="views-wrapper">
+
+        <!-- View 1: Custom Player UI -->
+        <div id="playerView" class="view-panel active">
+          <div class="glass-player">
+            <div class="album-art" id="albumArt"></div>
+
+            <div class="player-controls">
+              <div class="track-info-row">
+                <span class="track-title" id="trackTitle">Loading Pujo Vibe...</span>
+                <span class="track-time" id="trackTime">0:00 / 0:00</span>
+              </div>
+
+              <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+
+              <div class="btn-row">
+                <button class="ctrl-btn" onclick="prevTrack(event)" aria-label="Previous track">⏮</button>
+                <button class="ctrl-btn play-btn" id="mainPlayBtn" onclick="togglePlay(event)" aria-label="Play or pause">▶</button>
+                <button class="ctrl-btn" onclick="nextTrack(event)" aria-label="Next track">⏭</button>
+              </div>
+            </div>
+
+            <!-- Menu Button to Open Drawer -->
+            <button class="menu-btn" onclick="toggleDrawer(event)" title="View Playlist" aria-label="View playlist">☰</button>
+          </div>
+        </div>
+
+        <!-- View 2: Parikrama -->
+        <div id="parikramaView" class="view-panel">
+          <div class="pandal-list-panel">
+            <div id="statusMsg" style="font-size:0.8rem; margin-bottom:10px; color:var(--text-muted);">📍 Calculating nearest pandals...</div>
+            <div id="pandalContainer"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Center Footer -->
+    <div class="footer">Made by prabrit with love ❤️</div>
+  </div>
+
+  <!-- Slide-out Curated Playlist Drawer -->
+  <div class="drawer" id="playlistDrawer">
+    <div class="drawer-header">
+      <h3>🎶 Pujo Sangeet List</h3>
+      <button class="close-btn" onclick="toggleDrawer()" aria-label="Close playlist">×</button>
+    </div>
+    <div class="playlist-items" id="playlistContainer">
+      <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6); padding: 10px;">
+        Hit Play to load the tracklist...
+      </div>
+    </div>
+  </div>
+
+  <!-- YOUTUBE IFRAME API SCRIPT -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    // YOUR YOUTUBE PLAYLIST ID
+    const myPlaylistId = 'PLTIwWpbfjvr0';
+
+    let player;
+    let playlistIds = [];
+    let isPlaying = false;
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('youtube-player', {
+        height: '0', width: '0',
+        playerVars: {
+          'autoplay': 0,
+          'controls': 0,
+          'disablekb': 1,
+          'playsinline': 1, // lets iOS keep audio alive instead of forcing native fullscreen video
+          'listType': 'playlist',
+          'list': myPlaylistId
+        },
+        events: {
+          'onReady': (event) => {
+             setupMediaSession();
+             setTimeout(() => {
+                playlistIds = player.getPlaylist() || [];
+                if(playlistIds.length > 0) renderPlaylistDrawer();
+             }, 1500);
+          },
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    // ---------- Background / lock-screen playback (Media Session API) ----------
+    // This is what lets the track keep playing (and shows controls) when the
+    // phone screen locks, as long as this tab stays open.
+    function setupMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      navigator.mediaSession.setActionHandler('play', () => player && player.playVideo());
+      navigator.mediaSession.setActionHandler('pause', () => player && player.pauseVideo());
+      navigator.mediaSession.setActionHandler('previoustrack', () => prevTrack());
+      navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack());
+    }
+
+    function updateMediaSessionMetadata(videoData) {
+      if (!('mediaSession' in navigator) || !videoData) return;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: videoData.title || 'Sharadiya Sangeet',
+        artist: 'Pujo Playlist • Sharadiya',
+        album: 'শারদীয়া',
+        artwork: [
+          { src: `https://img.youtube.com/vi/${videoData.video_id}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
+          { src: `https://img.youtube.com/vi/${videoData.video_id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
+        ]
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      const playBtn = document.getElementById('mainPlayBtn');
+
+      if (event.data == YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        playBtn.innerText = '❚❚';
+        playBtn.style.paddingLeft = '0';
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+
+        if (playlistIds.length === 0) {
+          playlistIds = player.getPlaylist() || [];
+          renderPlaylistDrawer();
+        }
+
+        const videoData = player.getVideoData();
+        const currentIdx = player.getPlaylistIndex();
+
+        if (videoData) {
+          document.getElementById('trackTitle').innerText = videoData.title;
+          document.getElementById('albumArt').style.backgroundImage = `url('https://img.youtube.com/vi/${videoData.video_id}/mqdefault.jpg')`;
+          updateMediaSessionMetadata(videoData);
+
+          const drawerItemTitle = document.getElementById(`title-${currentIdx}`);
+          if (drawerItemTitle) drawerItemTitle.innerText = videoData.title;
+        }
+
+        highlightActiveTrackInDrawer(currentIdx);
+
+      } else if (event.data == YT.PlayerState.PAUSED) {
+        isPlaying = false;
+        playBtn.innerText = '▶';
+        playBtn.style.paddingLeft = '3px';
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      }
+    }
+
+    function togglePlay(e) {
+      if (e) addRipple(e, true);
+      if (!player) return;
+      if (isPlaying) player.pauseVideo();
+      else player.playVideo();
+    }
+
+    function nextTrack(e) { if (e) addRipple(e); if (player) player.nextVideo(); }
+    function prevTrack(e) { if (e) addRipple(e); if (player) player.previousVideo(); }
+
+    function renderPlaylistDrawer() {
+      const container = document.getElementById('playlistContainer');
+      container.innerHTML = '';
+
+      playlistIds.forEach((id, index) => {
+        container.innerHTML += `
+          <div class="playlist-item" id="item-${index}" onclick="selectTrack(${index}, event)">
+            <img class="playlist-thumb" src="https://img.youtube.com/vi/${id}/mqdefault.jpg">
+            <div class="playlist-info">
+              <h5 id="title-${index}">Pujo Track ${index + 1}</h5>
+              <p>Click to Play</p>
+            </div>
+          </div>`;
+      });
+    }
+
+    function highlightActiveTrackInDrawer(currentIdx) {
+      document.querySelectorAll('.playlist-item').forEach((item, index) => {
+        if (index === currentIdx) item.classList.add('active');
+        else item.classList.remove('active');
+      });
+    }
+
+    function selectTrack(index, e) {
+      if (e) addRipple(e);
+      if (player) player.playVideoAt(index);
+      setTimeout(toggleDrawer, 150);
+    }
+
+    setInterval(() => {
+      if (player && isPlaying && typeof player.getCurrentTime === 'function') {
+        const currentTime = player.getCurrentTime();
+        const duration = player.getDuration();
+        if (duration > 0) {
+          const progressPercent = (currentTime / duration) * 100;
+          document.getElementById('progressFill').style.width = progressPercent + '%';
+          document.getElementById('trackTime').innerText = formatTime(currentTime) + ' / ' + formatTime(duration);
+
+          if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+            try {
+              navigator.mediaSession.setPositionState({ duration, playbackRate: 1, position: currentTime });
+            } catch (err) { /* ignore — some browsers are picky about position state timing */ }
+          }
+        }
+      }
+    }, 1000);
+
+    function formatTime(seconds) {
+      const min = Math.floor(seconds / 60);
+      const sec = Math.floor(seconds % 60);
+      return min + ":" + (sec < 10 ? "0" : "") + sec;
+    }
+
+    // --- UI LOGIC (Clock, Ripple, Drawer Toggle, Map) ---
+    function updateClock() {
+      const now = new Date();
+      let hours = now.getHours(), minutes = now.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      document.getElementById('liveClock').innerText = `${hours}:${minutes} ${ampm}`;
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    // Material-style ripple / state-layer effect for buttons
+    function addRipple(e, dark) {
+      const btn = e.currentTarget;
+      const existing = btn.querySelector('.ripple');
+      if (existing) existing.remove();
+
+      const rect = btn.getBoundingClientRect();
+      const diameter = Math.max(rect.width, rect.height);
+      const radius = diameter / 2;
+      const clientX = e.clientX || (rect.left + rect.width / 2);
+      const clientY = e.clientY || (rect.top + rect.height / 2);
+
+      const circle = document.createElement('span');
+      circle.className = 'ripple' + (dark ? ' ripple-dark' : '');
+      circle.style.width = circle.style.height = diameter + 'px';
+      circle.style.left = (clientX - rect.left - radius) + 'px';
+      circle.style.top = (clientY - rect.top - radius) + 'px';
+      btn.appendChild(circle);
+      setTimeout(() => circle.remove(), 600);
+    }
+
+    // Plays the ripple, then navigates to the note page
+    function rippleNav(e) {
+      e.preventDefault();
+      addRipple(e);
+      const href = e.currentTarget.getAttribute('href');
+      setTimeout(() => { window.location.href = href; }, 200);
+    }
+
+    function switchMode(mode, btn, e) {
+      if (e) addRipple(e);
+      document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+
+      btn.classList.add('active');
+
+      if(mode === 'player') {
+        document.getElementById('playerView').classList.add('active');
+      } else {
+        document.getElementById('parikramaView').classList.add('active');
+        getUserLocation();
+      }
+    }
+
+    function toggleDrawer(e) {
+      if (e) addRipple(e);
+      document.getElementById('playlistDrawer').classList.toggle('open');
+    }
+
+    // EXPANDED PUJO PANDALS LIST
+    const pandals = [
+      // Dum Dum & VIP Road Area
+      { name: "Sree Bhumi Sporting Club", location: "Lake Town", lat: 22.5975, lng: 88.3980 },
+      { name: "Dum Dum Park Tarun Sangha", location: "Dum Dum Park", lat: 22.6086, lng: 88.4069 },
+      { name: "Dum Dum Park Bharat Chakra", location: "Dum Dum Park", lat: 22.6094, lng: 88.4072 },
+      { name: "Lake Town Adhibasi Vrinda", location: "Lake Town", lat: 22.6022, lng: 88.4005 },
+
+      // North Kolkata
+      { name: "Bagbazar Sarbojonin", location: "Bagbazar", lat: 22.6025, lng: 88.3712 },
+      { name: "Tala Prattoy", location: "Tala", lat: 22.6075, lng: 88.3764 },
+      { name: "Kumartuli Park", location: "Kumartuli", lat: 22.5991, lng: 88.3621 },
+      { name: "Ahiritola Sarbojonin", location: "Ahiritola", lat: 22.5959, lng: 88.3582 },
+      { name: "College Square", location: "College Street", lat: 22.5762, lng: 88.3634 },
+      { name: "Mohammad Ali Park", location: "MG Road", lat: 22.5802, lng: 88.3585 },
+      { name: "Hatibagan Sarbojonin", location: "Hatibagan", lat: 22.5944, lng: 88.3720 },
+      { name: "Kashi Bose Lane", location: "Kashi Bose Lane", lat: 22.5909, lng: 88.3689 },
+      { name: "Simla Byayam Samity", location: "Simla", lat: 22.5851, lng: 88.3645 },
+      { name: "Bidhan Sarani Atlas Club", location: "Shyambazar", lat: 22.5997, lng: 88.3729 },
+      { name: "Maniktala Chaltabagan Lohapatty", location: "Maniktala", lat: 22.5849, lng: 88.3722 },
+
+      // Central Kolkata
+      { name: "Santosh Mitra Square", location: "Bowbazar", lat: 22.5684, lng: 88.3656 },
+      { name: "Sealdah Railway Athletic Club", location: "Sealdah", lat: 22.5706, lng: 88.3719 },
+
+      // East Kolkata (Ultadanga / Kankurgachi)
+      { name: "Kankurgachi Jubak Brinda", location: "Kankurgachi", lat: 22.5794, lng: 88.3881 },
+      { name: "Telengabagan Durgotsab", location: "Ultadanga", lat: 22.5949, lng: 88.3853 },
+      { name: "Karbagan Sarbojanin", location: "Ultadanga", lat: 22.5952, lng: 88.3843 },
+
+      // South Kolkata
+      { name: "Deshapriya Park", location: "Ballygunge", lat: 22.5185, lng: 88.3512 },
+      { name: "Tridhara Sammilani", location: "Manoharpukur", lat: 22.5152, lng: 88.3486 },
+      { name: "Ekdalia Evergreen", location: "Gariahat", lat: 22.5255, lng: 88.3654 },
+      { name: "Singhi Park", location: "Gariahat", lat: 22.5268, lng: 88.3640 },
+      { name: "Suruchi Sangha", location: "New Alipore", lat: 22.5186, lng: 88.3298 },
+      { name: "Chetla Agrani", location: "Chetla", lat: 22.5188, lng: 88.3375 },
+      { name: "Mudiali Club", location: "Mudiali", lat: 22.5098, lng: 88.3444 },
+      { name: "Badamtala Ashar Sangha", location: "Kalighat", lat: 22.5222, lng: 88.3438 },
+      { name: "Bosepukur Sitala Mandir", location: "Kasba", lat: 22.5135, lng: 88.3842 },
+      { name: "Jodhpur Park", location: "Jodhpur Park", lat: 22.5048, lng: 88.3657 },
+      { name: "66 Pally", location: "Kalighat", lat: 22.5181, lng: 88.3428 },
+      { name: "Naktala Udayan Sangha", location: "Naktala", lat: 22.4743, lng: 88.3666 },
+      { name: "Ballygunge Cultural Association", location: "Ballygunge", lat: 22.5162, lng: 88.3558 },
+      { name: "Hindustan Park", location: "Hindustan Park", lat: 22.4993, lng: 88.3557 },
+
+      // Salt Lake (Bidhannagar)
+      { name: "Salt Lake FD Block", location: "Sector 3, Salt Lake", lat: 22.5835, lng: 88.4123 },
+      { name: "Salt Lake BJ Block", location: "Sector 2, Salt Lake", lat: 22.5907, lng: 88.4266 },
+      { name: "Salt Lake CE Block", location: "Sector 1, Salt Lake", lat: 22.5943, lng: 88.4129 },
+
+      // West Kolkata (Behala)
+      { name: "Behala Nutan Dal", location: "Behala", lat: 22.5002, lng: 88.3203 },
+      { name: "Barisha Sarbojonin", location: "Paschim Barisha", lat: 22.4799, lng: 88.3081 },
+      { name: "Behala Club", location: "Behala", lat: 22.5053, lng: 88.3141 }
+    ];
+
+    function getUserLocation() {
+      document.getElementById('pandalContainer').innerHTML = pandals.map(p => `
+        <div class="pandal-card">
+          <div><h4>${p.name}</h4><p>${p.location}</p></div>
+          <a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank" class="route-btn">Map 🗺️</a>
+        </div>`).join('');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>একটা ছোট্ট কথা | Sharadiya</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Baloo+Da+2:wght@500;600;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.22);
+      --accent-gold: #D4AF37;
+      --primary-crimson: #A91D22;
+      --text-muted: rgba(255, 255, 255, 0.72);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #fff;
+      min-height: 100vh; width: 100vw;
+
+      background-image: url('chokhudan.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+
+      display: flex; align-items: center; justify-content: center;
+      padding: 32px 20px;
+    }
+
+    @media (max-width: 768px) {
+      body { background-image: url('Sakti.png'); }
+    }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: linear-gradient(160deg, rgba(10,4,6,0.88), rgba(10,4,6,0.72));
+      z-index: 0;
+    }
+
+    .back-link {
+      position: fixed; top: 20px; left: 20px; z-index: 3;
+      display: flex; align-items: center; gap: 8px;
+      background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+      color: #fff; text-decoration: none; padding: 8px 16px 8px 12px; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 600; transition: background .2s ease, transform .2s ease;
+    }
+    .back-link:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+    .back-link:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+
+    .message-card {
+      position: relative; z-index: 2;
+      max-width: 640px; width: 100%; max-height: 82vh; overflow-y: auto;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 26px; padding: 52px 38px 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+
+    .glow {
+      position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+      width: 220px; height: 220px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(212,175,55,0.35), transparent 70%);
+      filter: blur(10px); z-index: -1;
+    }
+
+    .message-heading {
+      font-family: 'Baloo Da 2', sans-serif; font-weight: 700;
+      font-size: 2.4rem; color: var(--accent-gold);
+      margin-bottom: 26px; text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+
+    .message-body {
+      font-family: 'Hind Siliguri', sans-serif; font-weight: 400;
+      font-size: 1.12rem; line-height: 2.1; color: rgba(255,255,255,0.94);
+      text-align: left; white-space: pre-line;
+    }
+
+    .message-sign {
+      margin-top: 30px; font-family: 'Baloo Da 2', sans-serif; font-weight: 600;
+      font-size: 1.3rem; color: var(--accent-gold); text-align: right;
+    }
+    .message-sign span { display: block; font-family: 'Hind Siliguri', sans-serif; font-size: 0.95rem; color: var(--text-muted); font-weight: 400; margin-bottom: 4px; }
+
+    .mail-link {
+      position: relative; overflow: hidden;
+      display: inline-flex; align-items: center; gap: 10px; margin-top: 34px;
+      padding: 12px 26px; border-radius: 50px; background: var(--primary-crimson);
+      color: #fff; text-decoration: none; font-weight: 600; font-size: 0.92rem;
+      box-shadow: 0 6px 18px rgba(169,29,34,0.35); transition: transform .15s ease, box-shadow .2s ease;
+    }
+    .mail-link:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(169,29,34,0.45); }
+    .mail-link:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 3px; }
+
+    .ripple {
+      position: absolute; border-radius: 50%; transform: scale(0);
+      background: rgba(255,255,255,.45); animation: ripple-anim .55s ease-out; pointer-events: none;
+    }
+    @keyframes ripple-anim { to { transform: scale(3); opacity: 0; } }
+
+    @media (max-width: 600px) {
+      .message-heading { font-size: 1.9rem; }
+      .message-card { padding: 46px 24px 32px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ripple, .mail-link, .back-link { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+
+  <a href="index.html" class="back-link" aria-label="Back to Sharadiya">
+    ← Sharadiya
+  </a>
+
+  <div class="message-card">
+    <div class="glow"></div>
+    <h1 class="message-heading">নমস্কার,</h1>
+
+    <p class="message-body">সকলকে শারদীয়ার প্রীতি, শুভেচ্ছা এবং ভালোবাসা। বাঙালির পুজোর আবেগ, ভালোবাসাকে আরও রঙিন করে তুলতে আমার এই ছোট্ট নিবেদন — শারদীয়া। আশা করি সকলের ভালো লাগবে।
+
+যদি কোনো শারদীয়া সংক্রান্ত ত্রুটির সম্মুখীন হন, বা আপনার কোনো অভিযোগ বা কোনো অনুরোধ থাকে, আপনারা আমাকে জানাতে পারেন নিচের মেইল আইকনে ক্লিক করে।
+
+সকলে ভালো থাকুন, সুস্থ থাকুন, এবং শারদীয়াকে পাশে রেখে পুজো অনেক বেশি উপভোগ করুন। </p>
+
+    <div class="message-sign">
+      <span>উৎসবের আনন্দ যেন থমকে না যায়! <br>
+        ধন্যবাদান্তে,</span>
+         প্রাবৃট
+    </div>
+
+    <a href="mailto:prabritdas15@gmail.com" class="mail-link" onclick="addRipple(event)" aria-label="Email Prabrit">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="3"/>
+        <path d="M3 7l9 6 9-6"/>
+      </svg>
+      Mail Me
+    </a>
+  </div>
+
+  <script>
+    function addRipple(e) {
+      const btn = e.currentTarget;
+      const existing = btn.querySelector('.ripple');
+      if (existing) existing.remove();
+
+      const rect = btn.getBoundingClientRect();
+      const diameter = Math.max(rect.width, rect.height);
+      const radius = diameter / 2;
+      const clientX = e.clientX || (rect.left + rect.width / 2);
+      const clientY = e.clientY || (rect.top + rect.height / 2);
+
+      const circle = document.createElement('span');
+      circle.className = 'ripple';
+      circle.style.width = circle.style.height = diameter + 'px';
+      circle.style.left = (clientX - rect.left - radius) + 'px';
+      circle.style.top = (clientY - rect.top - radius) + 'px';
+      btn.appendChild(circle);
+      setTimeout(() => circle.remove(), 600);
+    }
+  </script>
+</body>
+</html>
