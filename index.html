@@ -236,13 +236,8 @@
 </head>
 <body>
 
-  <!-- HIDDEN YOUTUBE PLAYER -->
-  <div id="youtube-player" style="display: none;"></div>
-
-  <!-- SILENT WAKE-LOCK AUDIO HACK -->
-  <audio id="bgKeepAlive" loop style="display:none;">
-    <source src="data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
-  </audio>
+  <!-- REAL AUDIO ENGINE — this is what actually keeps playing in the background/lock screen -->
+  <audio id="mainAudio" preload="metadata" playsinline></audio>
 
   <div class="overlay"></div>
 
@@ -330,17 +325,21 @@
     </div>
   </div>
 
-  <script src="https://www.youtube.com/iframe_api"></script>
-
   <script>
-    const myPlaylistId = 'PLTIwWpbfjvr0';
-    let player;
-    let playlistIds = [];
+    // ---- Playlist: point each `src` at an audio file YOU are allowed to host/stream. ----
+    // (YouTube doesn't expose a direct playable audio URL, and pulling one out programmatically
+    // would break YouTube's Terms of Service — so this needs real, self-hosted/licensed files.)
+    const tracks = [
+      { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "art/track1.jpg" },
+      { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "art/track1.jpg" },
+      { title: "Pujo Track 2", src: "audio/track2.mp3", art: "art/track2.jpg" },
+      { title: "Pujo Track 3", src: "audio/track3.mp3", art: "art/track3.jpg" }
+    ];
+
+    const audio = document.getElementById('mainAudio');
+    let currentIndex = 0;
     let isPlaying = false;
-    let audioCtx = null;
-    let silentOscillator = null;
-    let wakeLock = null;               // Screen Wake Lock handle
-    let resumeWatchdog = null;         // fast-poll watchdog after backgrounding
+    let wakeLock = null;               // Screen Wake Lock handle (nice-to-have, not required for audio to keep playing)
 
     const bgImages = ['Sakti.png','chokhudan.jpg', 'alo.jpg', 'dristi.png', 'poribar.jpg' , 'prem.png' , 'pujoalo.jpg' , 'sobarpujo.jpg' ]; 
     let bgIndex = 0;
@@ -365,27 +364,7 @@
     window.addEventListener('resize', updateBackground);
     updateBackground();
 
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('youtube-player', {
-        height: '0', width: '0',
-        playerVars: {
-          'autoplay': 0, 'controls': 0, 'disablekb': 1, 'playsinline': 1, 
-          'listType': 'playlist', 'list': myPlaylistId
-        },
-        events: {
-          'onReady': (event) => {
-             setupMediaSession();
-             setTimeout(() => {
-                playlistIds = player.getPlaylist() || [];
-                if(playlistIds.length > 0) renderPlaylistDrawer();
-             }, 1500);
-          },
-          'onStateChange': onPlayerStateChange
-        }
-      });
-    }
-
-    // ---------- Screen Wake Lock (keeps the screen from auto-sleeping while playing) ----------
+    // ---------- Screen Wake Lock (optional — just keeps the screen from auto-dimming while playing) ----------
     async function requestWakeLock() {
       try {
         if ('wakeLock' in navigator) {
@@ -393,7 +372,6 @@
           wakeLock.addEventListener('release', () => { wakeLock = null; });
         }
       } catch (e) {
-        // Wake Lock can fail (e.g. low battery, unsupported) — fine, just skip it.
         wakeLock = null;
       }
     }
@@ -404,168 +382,121 @@
       } catch (e) {}
     }
 
-    // Re-acquire the wake lock whenever the tab becomes visible again while playing,
-    // since the OS force-releases it the moment the tab is hidden/screen locks.
+    // The wake lock itself still gets force-released whenever the tab is hidden/screen locks —
+    // that's fine now, since it's no longer what's keeping playback alive. Just re-acquire it
+    // when the user comes back, so the screen doesn't dim mid-listen.
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' && isPlaying) {
         await requestWakeLock();
       }
     });
 
-    // Start a completely silent web audio node to trick mobile CPUs into staying awake
-    function startAudioWakeLock() {
-      try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-        if (!silentOscillator) {
-          silentOscillator = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-          gainNode.gain.value = 0.00001; // virtually silent
-          silentOscillator.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-          silentOscillator.start();
-        }
-      } catch(e) {}
-    }
-
-    function stopAudioWakeLock() {
-      try {
-        if (silentOscillator) {
-          silentOscillator.stop();
-          silentOscillator.disconnect();
-          silentOscillator = null;
-        }
-      } catch(e) {}
-    }
-
     function setupMediaSession() {
       if (!('mediaSession' in navigator)) return;
-      navigator.mediaSession.setActionHandler('play', () => player && player.playVideo());
-      navigator.mediaSession.setActionHandler('pause', () => player && player.pauseVideo());
-      navigator.mediaSession.setActionHandler('stop', () => {
-        if (player) player.pauseVideo();
-      });
+      navigator.mediaSession.setActionHandler('play', () => audio.play());
+      navigator.mediaSession.setActionHandler('pause', () => audio.pause());
       navigator.mediaSession.setActionHandler('previoustrack', () => prevTrack());
       navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack());
-      
       try {
         navigator.mediaSession.setActionHandler('seekto', (details) => {
-          if (player && details.seekTime) player.seekTo(details.seekTime, true);
+          if (details.seekTime !== undefined) audio.currentTime = details.seekTime;
         });
-      } catch(e) {}
+      } catch (e) {}
     }
 
-    function updateMediaSessionMetadata(videoData) {
-      if (!('mediaSession' in navigator) || !videoData) return;
+    function updateMediaSessionMetadata(track) {
+      if (!('mediaSession' in navigator) || !track) return;
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: videoData.title || 'Sharadiya Sangeet',
+        title: track.title || 'Sharadiya Sangeet',
         artist: 'Pujo Playlist • Sharadiya',
         album: 'শারদীয়া',
-        artwork: [
-          { src: `https://img.youtube.com/vi/${videoData.video_id}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
-        ]
+        artwork: [{ src: track.art, sizes: '512x512', type: 'image/jpeg' }]
       });
     }
 
-    function onPlayerStateChange(event) {
-      const playBtn = document.getElementById('mainPlayBtn');
-      if (event.data == YT.PlayerState.PLAYING) {
-        isPlaying = true;
-        playBtn.innerText = '❚❚';
-        playBtn.style.paddingLeft = '0';
-        
-        startAudioWakeLock();
-        requestWakeLock();
-        const keepAlive = document.getElementById('bgKeepAlive');
-        if (keepAlive) keepAlive.play().catch(e => {});
-
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-
-        if (playlistIds.length === 0) {
-          playlistIds = player.getPlaylist() || [];
-          renderPlaylistDrawer();
-        }
-
-        const videoData = player.getVideoData();
-        const currentIdx = player.getPlaylistIndex();
-
-        if (videoData) {
-          document.getElementById('trackTitle').innerText = videoData.title;
-          document.getElementById('albumArt').style.backgroundImage = `url('https://img.youtube.com/vi/${videoData.video_id}/mqdefault.jpg')`;
-          updateMediaSessionMetadata(videoData);
-
-          const drawerItemTitle = document.getElementById(`title-${currentIdx}`);
-          if (drawerItemTitle) drawerItemTitle.innerText = videoData.title;
-        }
-        highlightActiveTrackInDrawer(currentIdx);
-
-      } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
-        isPlaying = false;
-        playBtn.innerText = '▶';
-        playBtn.style.paddingLeft = '3px';
-        
-        stopAudioWakeLock();
-        releaseWakeLock();
-        const keepAlive = document.getElementById('bgKeepAlive');
-        if (keepAlive) keepAlive.pause();
-
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-      }
+    function loadTrack(index, autoplay) {
+      currentIndex = (index + tracks.length) % tracks.length;
+      const track = tracks[currentIndex];
+      audio.src = track.src;
+      document.getElementById('trackTitle').innerText = track.title;
+      document.getElementById('albumArt').style.backgroundImage = `url('${track.art}')`;
+      updateMediaSessionMetadata(track);
+      highlightActiveTrackInDrawer(currentIndex);
+      if (autoplay) audio.play().catch(() => {});
     }
 
     function togglePlay(e) {
       if (e) addRipple(e, true);
-      if (!player) return;
-      if (isPlaying) player.pauseVideo();
-      else player.playVideo();
+      if (audio.paused) audio.play().catch(() => {});
+      else audio.pause();
     }
 
-    function nextTrack(e) { if (e) addRipple(e); if (player) player.nextVideo(); }
-    function prevTrack(e) { if (e) addRipple(e); if (player) player.previousVideo(); }
+    function nextTrack(e) { if (e) addRipple(e); loadTrack(currentIndex + 1, true); }
+    function prevTrack(e) { if (e) addRipple(e); loadTrack(currentIndex - 1, true); }
+
+    // These fire from the audio element itself, so state stays correct even if play/pause
+    // was triggered from the lock screen or a Bluetooth headset button, not just our UI.
+    audio.addEventListener('play', () => {
+      isPlaying = true;
+      const playBtn = document.getElementById('mainPlayBtn');
+      playBtn.innerText = '❚❚';
+      playBtn.style.paddingLeft = '0';
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      requestWakeLock();
+    });
+
+    audio.addEventListener('pause', () => {
+      isPlaying = false;
+      const playBtn = document.getElementById('mainPlayBtn');
+      playBtn.innerText = '▶';
+      playBtn.style.paddingLeft = '3px';
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      releaseWakeLock();
+    });
+
+    audio.addEventListener('ended', () => nextTrack());
+
+    audio.addEventListener('timeupdate', () => {
+      if (audio.duration) {
+        document.getElementById('progressFill').style.width = (audio.currentTime / audio.duration) * 100 + '%';
+        document.getElementById('trackTime').innerText = formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+      }
+    });
+
+    document.getElementById('progressBar').addEventListener('click', (e) => {
+      if (!audio.duration) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    });
 
     function renderPlaylistDrawer() {
       const container = document.getElementById('playlistContainer');
-      container.innerHTML = '';
-      playlistIds.forEach((id, index) => {
-        container.innerHTML += `
+      container.innerHTML = tracks.map((t, index) => `
           <div class="playlist-item" id="item-${index}" onclick="selectTrack(${index}, event)">
-            <img class="playlist-thumb" src="https://img.youtube.com/vi/${id}/mqdefault.jpg">
+            <img class="playlist-thumb" src="${t.art}">
             <div class="playlist-info">
-              <h5 id="title-${index}">Pujo Track ${index + 1}</h5>
+              <h5 id="title-${index}">${t.title}</h5>
               <p>Click to Play</p>
             </div>
-          </div>`;
-      });
+          </div>`).join('');
     }
 
     function highlightActiveTrackInDrawer(currentIdx) {
       document.querySelectorAll('.playlist-item').forEach((item, index) => {
-        if (index === currentIdx) item.classList.add('active');
-        else item.classList.remove('active');
+        item.classList.toggle('active', index === currentIdx);
       });
     }
 
     function selectTrack(index, e) {
       if (e) addRipple(e);
-      if (player) player.playVideoAt(index);
+      loadTrack(index, true);
       setTimeout(toggleDrawer, 150);
     }
 
-    setInterval(() => {
-      if (player && isPlaying && typeof player.getCurrentTime === 'function') {
-        const currentTime = player.getCurrentTime();
-        const duration = player.getDuration();
-        if (duration > 0) {
-          const progressPercent = (currentTime / duration) * 100;
-          document.getElementById('progressFill').style.width = progressPercent + '%';
-          document.getElementById('trackTime').innerText = formatTime(currentTime) + ' / ' + formatTime(duration);
-        }
-      }
-    }, 1000);
+    // Set everything up on load — nothing plays until the user taps play (autoplay policy).
+    setupMediaSession();
+    renderPlaylistDrawer();
+    loadTrack(0, false);
 
     function formatTime(seconds) {
       const min = Math.floor(seconds / 60);
@@ -744,54 +675,6 @@
         </div>`;
       }).join('');
     }
-  </script>
-
-  <script>
-    // ---------- Aggressive resume logic ----------
-    // Cover every event a mobile browser might fire when the tab/app comes back to the
-    // foreground: visibilitychange (tab switch, app switch), pageshow (bfcache restore),
-    // focus (window regains focus), and 'resume' (some in-app browsers / PWA wrappers).
-    function attemptResume(source) {
-      if (!isPlaying || !player || typeof player.getPlayerState !== 'function') return;
-      try {
-        if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
-          player.playVideo();
-        }
-      } catch (e) {}
-      // also nudge the wake lock + silent audio context back on
-      requestWakeLock();
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-      const keepAlive = document.getElementById('bgKeepAlive');
-      if (keepAlive && keepAlive.paused) keepAlive.play().catch(()=>{});
-    }
-
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        attemptResume('visibilitychange');
-        // For a few seconds after returning, poll fast in case the first attempt
-        // races with the browser still waking the tab up.
-        clearInterval(resumeWatchdog);
-        let ticks = 0;
-        resumeWatchdog = setInterval(() => {
-          attemptResume('watchdog');
-          ticks++;
-          if (ticks > 6) clearInterval(resumeWatchdog); // ~6s of fast polling then stop
-        }, 1000);
-      }
-    });
-
-    window.addEventListener('pageshow', () => attemptResume('pageshow'));
-    window.addEventListener('focus', () => attemptResume('focus'));
-    document.addEventListener('resume', () => attemptResume('resume'), false);
-
-    // Backup background loop interval to kickstart playback if throttled
-    setInterval(() => {
-      if (isPlaying && player && typeof player.getPlayerState === 'function') {
-        if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
-          player.playVideo();
-        }
-      }
-    }, 2000);
   </script>
 
   <script>
