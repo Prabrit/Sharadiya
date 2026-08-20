@@ -248,7 +248,6 @@
 
   <div class="ui-container">
     <nav class="top-bar">
-      <!-- Target="_blank" added so music keeps playing in this tab -->
       <a href="message.html" target="_blank" class="note-pill" onclick="rippleNav(event)" title="A little note from Prabrit">
         <svg class="note-icon" width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
           <path d="M9 3v10.55A4 4 0 1 0 11 17V7h6V3H9z"/>
@@ -338,8 +337,10 @@
     let player;
     let playlistIds = [];
     let isPlaying = false;
+    let audioCtx = null;
+    let silentOscillator = null;
 
-    const bgImages = ['Sakti.png','chokhudan.jpg',  'alo.jpg', 'dristi.png', 'poribar.jpg' , 'prem.png' , 'pujoalo.jpg' , 'sobarpujo.jpg' ]; 
+    const bgImages = ['Sakti.png','chokhudan.jpg', 'alo.jpg', 'dristi.png', 'poribar.jpg' , 'prem.png' , 'pujoalo.jpg' , 'sobarpujo.jpg' ]; 
     let bgIndex = 0;
 
     function updateBackground() {
@@ -382,6 +383,36 @@
       });
     }
 
+    // Start a completely silent web audio node to trick mobile CPUs into staying awake
+    function startAudioWakeLock() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        if (!silentOscillator) {
+          silentOscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 0.00001; // virtually silent
+          silentOscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          silentOscillator.start();
+        }
+      } catch(e) {}
+    }
+
+    function stopAudioWakeLock() {
+      try {
+        if (silentOscillator) {
+          silentOscillator.stop();
+          silentOscillator.disconnect();
+          silentOscillator = null;
+        }
+      } catch(e) {}
+    }
+
     function setupMediaSession() {
       if (!('mediaSession' in navigator)) return;
       navigator.mediaSession.setActionHandler('play', () => player && player.playVideo());
@@ -418,6 +449,7 @@
         playBtn.innerText = '❚❚';
         playBtn.style.paddingLeft = '0';
         
+        startAudioWakeLock();
         const keepAlive = document.getElementById('bgKeepAlive');
         if (keepAlive) keepAlive.play().catch(e => {});
 
@@ -441,11 +473,12 @@
         }
         highlightActiveTrackInDrawer(currentIdx);
 
-      } else if (event.data == YT.PlayerState.PAUSED) {
+      } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
         isPlaying = false;
         playBtn.innerText = '▶';
         playBtn.style.paddingLeft = '3px';
         
+        stopAudioWakeLock();
         const keepAlive = document.getElementById('bgKeepAlive');
         if (keepAlive) keepAlive.pause();
 
@@ -547,7 +580,6 @@
       setTimeout(() => circle.remove(), 600);
     }
 
-    /* Updated navigation function to open link in new tab */
     function rippleNav(e) {
       e.preventDefault();
       addRipple(e);
@@ -684,16 +716,23 @@
   </script>
 
   <script>
-    // Visibility listener to ensure player stays awake if hidden
+    // Force play recovery if browser visibility changes
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden && isPlaying && player) {
-        setTimeout(() => {
-          if (isPlaying && player.getPlayerState() !== YT.PlayerState.PLAYING) {
-            player.playVideo();
-          }
-        }, 300);
+      if (!document.hidden && isPlaying && player) {
+        if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
+          player.playVideo();
+        }
       }
     });
+
+    // Backup background loop interval to kickstart playback if throttled
+    setInterval(() => {
+      if (isPlaying && player && typeof player.getPlayerState === 'function') {
+        if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
+          player.playVideo();
+        }
+      }
+    }, 2000);
   </script>
 
   <script>
