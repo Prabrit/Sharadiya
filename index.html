@@ -339,6 +339,8 @@
     let isPlaying = false;
     let audioCtx = null;
     let silentOscillator = null;
+    let wakeLock = null;               // Screen Wake Lock handle
+    let resumeWatchdog = null;         // fast-poll watchdog after backgrounding
 
     const bgImages = ['Sakti.png','chokhudan.jpg', 'alo.jpg', 'dristi.png', 'poribar.jpg' , 'prem.png' , 'pujoalo.jpg' , 'sobarpujo.jpg' ]; 
     let bgIndex = 0;
@@ -382,6 +384,33 @@
         }
       });
     }
+
+    // ---------- Screen Wake Lock (keeps the screen from auto-sleeping while playing) ----------
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => { wakeLock = null; });
+        }
+      } catch (e) {
+        // Wake Lock can fail (e.g. low battery, unsupported) — fine, just skip it.
+        wakeLock = null;
+      }
+    }
+
+    function releaseWakeLock() {
+      try {
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+      } catch (e) {}
+    }
+
+    // Re-acquire the wake lock whenever the tab becomes visible again while playing,
+    // since the OS force-releases it the moment the tab is hidden/screen locks.
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && isPlaying) {
+        await requestWakeLock();
+      }
+    });
 
     // Start a completely silent web audio node to trick mobile CPUs into staying awake
     function startAudioWakeLock() {
@@ -450,6 +479,7 @@
         playBtn.style.paddingLeft = '0';
         
         startAudioWakeLock();
+        requestWakeLock();
         const keepAlive = document.getElementById('bgKeepAlive');
         if (keepAlive) keepAlive.play().catch(e => {});
 
@@ -479,6 +509,7 @@
         playBtn.style.paddingLeft = '3px';
         
         stopAudioWakeLock();
+        releaseWakeLock();
         const keepAlive = document.getElementById('bgKeepAlive');
         if (keepAlive) keepAlive.pause();
 
@@ -716,14 +747,42 @@
   </script>
 
   <script>
-    // Force play recovery if browser visibility changes
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden && isPlaying && player) {
+    // ---------- Aggressive resume logic ----------
+    // Cover every event a mobile browser might fire when the tab/app comes back to the
+    // foreground: visibilitychange (tab switch, app switch), pageshow (bfcache restore),
+    // focus (window regains focus), and 'resume' (some in-app browsers / PWA wrappers).
+    function attemptResume(source) {
+      if (!isPlaying || !player || typeof player.getPlayerState !== 'function') return;
+      try {
         if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
           player.playVideo();
         }
+      } catch (e) {}
+      // also nudge the wake lock + silent audio context back on
+      requestWakeLock();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+      const keepAlive = document.getElementById('bgKeepAlive');
+      if (keepAlive && keepAlive.paused) keepAlive.play().catch(()=>{});
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        attemptResume('visibilitychange');
+        // For a few seconds after returning, poll fast in case the first attempt
+        // races with the browser still waking the tab up.
+        clearInterval(resumeWatchdog);
+        let ticks = 0;
+        resumeWatchdog = setInterval(() => {
+          attemptResume('watchdog');
+          ticks++;
+          if (ticks > 6) clearInterval(resumeWatchdog); // ~6s of fast polling then stop
+        }, 1000);
       }
     });
+
+    window.addEventListener('pageshow', () => attemptResume('pageshow'));
+    window.addEventListener('focus', () => attemptResume('focus'));
+    document.addEventListener('resume', () => attemptResume('resume'), false);
 
     // Backup background loop interval to kickstart playback if throttled
     setInterval(() => {
