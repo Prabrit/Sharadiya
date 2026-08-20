@@ -330,10 +330,28 @@
     // (YouTube doesn't expose a direct playable audio URL, and pulling one out programmatically
     // would break YouTube's Terms of Service — so this needs real, self-hosted/licensed files.)
     const tracks = [
-      { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "art/track1.jpg" },
-      { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "art/track1.jpg" },
-      { title: "Pujo Track 2", src: "audio/track2.mp3", art: "art/track2.jpg" },
-      { title: "Pujo Track 3", src: "audio/track3.mp3", art: "art/track3.jpg" }
+      { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "logo.png" },
+      { title: "Chaarpase Alo Hok", src: "pujo_songs/Charpase Alo Hok.mp3", art: "logo.png" },
+      { title: "Madhukaitava Vidhwangsi", src: "pujo_songs/Madhukaitava Vidhwangsi.mp3", art: "logo.png" },
+      { title: "Jaago Uma", src: "pujo_songs/Jaago Uma.mp3", art: "logo.png" },
+      { title: "DHAK BAJA KASHOR BAJA", src: "pujo_songs/DHAK BAJA KASHOR BAJA.mp3", art: "logo.png" },
+      { title: "Aaj Baaje", src: "pujo_songs/Aaj Baaje.mp3.mp3", art: "logo.png" },
+      { title: "Dugga Elo", src: "pujo_songs/Dugga Elo.mp3", art: "logo.png" },
+      { title: "Agomonir Gaan", src: "pujo_songs/Agomonir Gaan.mp3", art: "logo.png" },
+      { title: "Esho Naba Rupe", src: "pujo_songs/Esho Naba Rupe .mp3", art: "logo.png" },
+      { title: "Dhaker Taley", src: "pujo_songs/Dhaker Taley.mp3", art: "logo.png" },
+      { title: "Durge Durge Durgatinashini", src: "pujo_songs/Durge Durge Durgatinashini .mp3", art: "logo.png" },
+      { title: "Gouri Elo", src: "pujo_songs/Gouri Elo.mp3", art: "logo.png" },
+      { title: "Jago Jogmaya Jago Mrinmoyee", src: "pujo_songs/Jago Jogmaya Jago Mrinmoyee.mp3", art: "logo.png" },
+      { title: "Pujar Gaan", src: "pujo_songs/Pujar Gaan.mp3", art: "logo.png" },
+      { title: "Nakku Nakur Na Jao Thakur", src: "pujo_songs/Nakku Nakur Na Jao Thakur.mp3", art: "logo.png" },
+      { title: "Doob De Re Mon", src: "pujo_songs/Doob De Re Mon.mp3", art: "logo.png" },
+      { title: "Ailo Uma Barite", src: "pujo_songs/Ailo Uma Barite.mp3", art: "logo.png" },
+      { title: "Dugga Ma", src: "pujo_songs/Dugga Ma.mp3", art: "logo.png" },
+      { title: "Ebar Jeno Onno Rokom Pujo", src: "pujo_songs/Ebar Jeno Onno Rokom Pujo.mp3", art: "logo.png" },
+      { title: "Elo Je Maa", src: "pujo_songs/Elo Je Maa.mp3", art: "logo.png" },
+      { title: "Maa Go Tui", src: "pujo_songs/Maa Go Tui.mp3", art: "logo.png" },
+     
     ];
 
     const audio = document.getElementById('mainAudio');
@@ -349,7 +367,7 @@
       const isLaptop = window.innerWidth > 768;
 
       if (isLandscape || isLaptop) {
-        document.body.style.backgroundImage = `url('chokhudan.jpg')`;
+        document.body.style.backgroundImage = `url('pujo.png')`;
       } else {
         document.body.style.backgroundImage = `url('${bgImages[bgIndex]}')`;
       }
