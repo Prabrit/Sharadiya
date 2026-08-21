@@ -3,7 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sharadiya</title>
+  <title>Sharadiya | Durga Pujo Music, Pandal Finder & Metro Guide</title>
+  <meta name="description" content="Sharadiya — your Durga Pujo companion. Curated Pujo & Mahalaya music that plays in the background, a pandal finder near you, and Kolkata Metro routes to get there.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://sharadiya.in/">
+  <meta name="theme-color" content="#A91D22">
+
+  <!-- Open Graph / social link previews -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Sharadiya — শারদীয়া">
+  <meta property="og:description" content="A Durga Pujo companion: Pujo & Mahalaya music, a pandal finder, and Kolkata Metro routes.">
+  <meta property="og:image" content="https://sharadiya.in/chokhudan.jpg">
+  <meta property="og:url" content="https://sharadiya.in/">
+  <meta name="twitter:card" content="summary_large_image">
+
   <link rel="icon" type="image/png" href="logo.png" class="site-logo">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tiro+Bangla:ital@0;1&family=Baloo+Da+2:wght@500;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
 
@@ -29,7 +42,8 @@
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       color: var(--text-main);
-      height: 100vh; width: 100vw; overflow: hidden;
+      height: 100vh; height: 100dvh; width: 100vw; overflow: hidden;
+      overscroll-behavior: none;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -48,10 +62,11 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      padding: 20px 40px;
+      padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+      overflow: hidden;
     }
 
-    .top-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-shrink: 0; }
 
     .note-pill {
       position: relative;
@@ -69,38 +84,43 @@
 
     .countdown-bar {
       font-family: 'Tiro Bangla', serif;
-      font-size: 1.1rem;
+      font-size: clamp(0.85rem, 3vw, 1.1rem);
       color: var(--accent-gold);
-      margin-top: 15px;
+      margin-top: 10px;
       text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      flex-shrink: 0;
     }
 
     .center-title {
-      position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
-      text-align: center; width: 90%; max-width: 500px;
+      flex-shrink: 0;
+      text-align: center; width: 100%; max-width: 500px;
+      margin: clamp(8px, 4vh, 32px) auto 0;
     }
-    .bengali-title { font-family: 'Tiro Bangla', serif; font-size: 4.8rem; text-shadow: 2px 4px 12px rgba(0,0,0,0.4); margin-bottom: -10px;}
-    .english-subtitle { font-size: 1.1rem; letter-spacing: 4px; opacity: 0.9; margin-bottom: 25px; }
+    .bengali-title { font-family: 'Tiro Bangla', serif; font-size: clamp(2.4rem, 11vw, 4.8rem); text-shadow: 2px 4px 12px rgba(0,0,0,0.4); margin-bottom: -6px; line-height: 1.05;}
+    .english-subtitle { font-size: clamp(0.85rem, 2.6vw, 1.1rem); letter-spacing: 4px; opacity: 0.9; margin-bottom: clamp(14px, 3vh, 25px); }
 
     .view-switcher {
-      display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
+      display: flex; justify-content: center; align-items: center; gap: 4px; flex-wrap: nowrap;
       background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(12px);
       padding: 5px; border-radius: 30px; border: 1px solid var(--glass-border);
+      max-width: 100%; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none;
     }
+    .view-switcher::-webkit-scrollbar { display: none; }
     .switch-btn {
-      position: relative; overflow: hidden;
+      position: relative; overflow: hidden; flex-shrink: 0;
       background: none; border: none; color: var(--text-muted);
-      padding: 8px 16px; border-radius: 20px; font-weight: 600;
-      font-size: 0.85rem; cursor: pointer; transition: all 0.3s;
+      padding: 8px 12px; border-radius: 20px; font-weight: 600;
+      font-size: clamp(0.72rem, 2.6vw, 0.85rem); white-space: nowrap; cursor: pointer; transition: all 0.3s;
     }
     .switch-btn.active { background: rgba(255, 255, 255, 0.15); color: #FFF; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 
     .bottom-area {
-      margin-top: auto; margin-bottom: 6vh; display: flex; flex-direction: column; gap: 15px;
+      margin-top: auto; display: flex; flex-direction: column; gap: 12px;
       max-width: 650px; margin-left: auto; margin-right: auto; width: 100%;
+      min-height: 0;
     }
 
-    .views-wrapper { width: 100%; }
+    .views-wrapper { width: 100%; min-height: 0; }
     .view-panel { display: none; }
     .view-panel.active { display: block; }
 
@@ -171,7 +191,7 @@
 
     .pandal-list-panel {
       background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border);
-      border-radius: 20px; padding: 18px; max-height: 280px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      border-radius: 20px; padding: 18px; max-height: min(280px, 32vh); overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     
     .pandal-list-panel::-webkit-scrollbar { width: 6px; }
@@ -187,11 +207,22 @@
     .pandal-card p { font-size: 0.8rem; color: var(--text-muted); }
     .route-btn { background: var(--primary-crimson); color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; flex-shrink: 0;}
 
+    .pandal-card.mahalaya-card { cursor: pointer; transition: background .2s ease, border-color .2s ease; }
+    .pandal-card.mahalaya-card:hover { background: rgba(0,0,0,0.32); }
+    .pandal-card.mahalaya-card.playing { background: rgba(212, 175, 55, 0.18); border-color: var(--accent-gold); }
+    .mahalaya-play-btn {
+      flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: none;
+      background: var(--accent-gold); color: #2A1400; font-size: 0.9rem;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; padding-left: 2px;
+    }
+    .pandal-card.mahalaya-card.playing .mahalaya-play-btn { padding-left: 0; }
+
     .footer {
-      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
-      font-size: 0.82rem; font-weight: 500; color: rgba(255, 255, 255, 0.8);
+      flex-shrink: 0;
+      text-align: center; margin-top: 10px;
+      font-size: 0.78rem; font-weight: 500; color: rgba(255, 255, 255, 0.8);
       letter-spacing: 0.5px; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-      pointer-events: none; z-index: 5;
+      pointer-events: none;
     }
 
     .drawer {
@@ -232,6 +263,23 @@
     .playlist-info h5 { font-size: 0.82rem; font-weight: 600; line-height: 1.2; }
     .playlist-info p { font-size: 0.7rem; color: var(--text-muted); }
 
+    /* Compact spacing on short viewports (small phones, landscape) so everything still fits */
+    @media (max-height: 700px) {
+      .center-title { margin-top: clamp(6px, 2vh, 16px); }
+      .english-subtitle { margin-bottom: clamp(8px, 1.6vh, 14px); }
+      .countdown-bar { margin-top: 6px; }
+      .bottom-area { gap: 8px; }
+      .pandal-list-panel { max-height: min(220px, 30vh); padding: 14px; }
+    }
+    @media (max-height: 520px) {
+      .center-title { margin-top: 4px; }
+      .bengali-title { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+      .english-subtitle { font-size: 0.75rem; margin-bottom: 6px; }
+      .countdown-bar { display: none; }
+      .glass-player { padding: 8px 10px; gap: 10px; }
+      .album-art { width: 46px; height: 46px; }
+    }
+
   </style>
 </head>
 <body>
@@ -258,9 +306,10 @@
       <h1 class="bengali-title">শারদীয়া</h1>
       <h2 class="english-subtitle">sharadiya</h2>
       <div class="view-switcher">
-        <button class="switch-btn active" onclick="switchMode('player', this, event)">Sangeet Player</button>
-        <button class="switch-btn" onclick="switchMode('parikrama', this, event)">Pujo Parikrama</button>
-        <button class="switch-btn" onclick="switchMode('metro', this, event)">Metro Routes</button>
+        <button class="switch-btn" onclick="switchMode('mahalaya', this, event)">Mahalaya</button>
+        <button class="switch-btn active" onclick="switchMode('player', this, event)">Music</button>
+        <button class="switch-btn" onclick="switchMode('parikrama', this, event)">Pandals</button>
+        <button class="switch-btn" onclick="switchMode('metro', this, event)">Metro</button>
       </div>
       <div class="countdown-bar" id="pujoCountdown"></div>
     </div>
@@ -306,6 +355,14 @@
             </div>
         </div>
 
+        <!-- View 4: Mahalaya — tap any track to play it through the same player/lock-screen controls -->
+        <div id="mahalayaView" class="view-panel">
+            <div class="pandal-list-panel">
+              <div style="font-size:0.8rem; margin-bottom:10px; color:var(--text-muted);">মহালয়া</div>
+              <div id="mahalayaContainer"></div>
+            </div>
+        </div>
+
       </div>
     </div>
 
@@ -326,16 +383,17 @@
   </div>
 
   <script>
-    // ---- Playlist: point each `src` at an audio file YOU are allowed to host/stream. ----
+    // ---- Playlists: point each `src` at an audio file YOU are allowed to host/stream. ----
     // (YouTube doesn't expose a direct playable audio URL, and pulling one out programmatically
     // would break YouTube's Terms of Service — so this needs real, self-hosted/licensed files.)
-    const tracks = [
+    const playlists = {
+      pujo: [
       { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "logo.png" },
       { title: "Chaarpase Alo Hok", src: "pujo_songs/Charpase Alo Hok.mp3", art: "logo.png" },
       { title: "Madhukaitava Vidhwangsi", src: "pujo_songs/Madhukaitava Vidhwangsi.mp3", art: "logo.png" },
       { title: "Jaago Uma", src: "pujo_songs/Jaago Uma.mp3", art: "logo.png" },
       { title: "DHAK BAJA KASHOR BAJA", src: "pujo_songs/DHAK BAJA KASHOR BAJA.mp3", art: "logo.png" },
-      { title: "Aaj Baaje", src: "pujo_songs/Aaj Baaje.mp3.mp3", art: "logo.png" },
+      { title: "Aaj Baaje", src: "pujo_songs/Aaj Baaje.mp3", art: "logo.png" },
       { title: "Dugga Elo", src: "pujo_songs/Dugga Elo.mp3", art: "logo.png" },
       { title: "Agomonir Gaan", src: "pujo_songs/Agomonir Gaan.mp3", art: "logo.png" },
       { title: "Esho Naba Rupe", src: "pujo_songs/Esho Naba Rupe .mp3", art: "logo.png" },
@@ -350,11 +408,17 @@
       { title: "Dugga Ma", src: "pujo_songs/Dugga Ma.mp3", art: "logo.png" },
       { title: "Ebar Jeno Onno Rokom Pujo", src: "pujo_songs/Ebar Jeno Onno Rokom Pujo.mp3", art: "logo.png" },
       { title: "Elo Je Maa", src: "pujo_songs/Elo Je Maa.mp3", art: "logo.png" },
-      { title: "Maa Go Tui", src: "pujo_songs/Maa Go Tui.mp3", art: "logo.png" },
-     
-    ];
+      { title: "Maa Go Tui", src: "pujo_songs/Maa Go Tui.mp3", art: "logo.png" }
+
+      ],
+      mahalaya: [
+        { title: "Mahalaya (Mahishasura Mardini)", src: "mahalaya/Mahalaya (Mahishasura Mardini).mp3", art: "art/mahalaya.jpg" }
+       
+      ]
+    };
 
     const audio = document.getElementById('mainAudio');
+    let activeList = 'pujo';           // which playlist ('pujo' or 'mahalaya') is currently loaded
     let currentIndex = 0;
     let isPlaying = false;
     let wakeLock = null;               // Screen Wake Lock handle (nice-to-have, not required for audio to keep playing)
@@ -367,7 +431,7 @@
       const isLaptop = window.innerWidth > 768;
 
       if (isLandscape || isLaptop) {
-        document.body.style.backgroundImage = `url('pujo.png')`;
+        document.body.style.backgroundImage = `url('pujo.png ')`;
       } else {
         document.body.style.backgroundImage = `url('${bgImages[bgIndex]}')`;
       }
@@ -432,14 +496,17 @@
       });
     }
 
-    function loadTrack(index, autoplay) {
-      currentIndex = (index + tracks.length) % tracks.length;
-      const track = tracks[currentIndex];
+    function loadTrack(listKey, index, autoplay) {
+      const list = playlists[listKey];
+      activeList = listKey;
+      currentIndex = (index + list.length) % list.length;
+      const track = list[currentIndex];
       audio.src = track.src;
       document.getElementById('trackTitle').innerText = track.title;
       document.getElementById('albumArt').style.backgroundImage = `url('${track.art}')`;
       updateMediaSessionMetadata(track);
-      highlightActiveTrackInDrawer(currentIndex);
+      highlightActiveTrackInDrawer();
+      highlightActiveMahalayaItem();
       if (autoplay) audio.play().catch(() => {});
     }
 
@@ -449,8 +516,8 @@
       else audio.pause();
     }
 
-    function nextTrack(e) { if (e) addRipple(e); loadTrack(currentIndex + 1, true); }
-    function prevTrack(e) { if (e) addRipple(e); loadTrack(currentIndex - 1, true); }
+    function nextTrack(e) { if (e) addRipple(e); loadTrack(activeList, currentIndex + 1, true); }
+    function prevTrack(e) { if (e) addRipple(e); loadTrack(activeList, currentIndex - 1, true); }
 
     // These fire from the audio element itself, so state stays correct even if play/pause
     // was triggered from the lock screen or a Bluetooth headset button, not just our UI.
@@ -461,6 +528,7 @@
       playBtn.style.paddingLeft = '0';
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
       requestWakeLock();
+      highlightActiveMahalayaItem();
     });
 
     audio.addEventListener('pause', () => {
@@ -470,6 +538,7 @@
       playBtn.style.paddingLeft = '3px';
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
       releaseWakeLock();
+      highlightActiveMahalayaItem();
     });
 
     audio.addEventListener('ended', () => nextTrack());
@@ -489,7 +558,7 @@
 
     function renderPlaylistDrawer() {
       const container = document.getElementById('playlistContainer');
-      container.innerHTML = tracks.map((t, index) => `
+      container.innerHTML = playlists.pujo.map((t, index) => `
           <div class="playlist-item" id="item-${index}" onclick="selectTrack(${index}, event)">
             <img class="playlist-thumb" src="${t.art}">
             <div class="playlist-info">
@@ -499,22 +568,54 @@
           </div>`).join('');
     }
 
-    function highlightActiveTrackInDrawer(currentIdx) {
+    function highlightActiveTrackInDrawer() {
       document.querySelectorAll('.playlist-item').forEach((item, index) => {
-        item.classList.toggle('active', index === currentIdx);
+        item.classList.toggle('active', activeList === 'pujo' && index === currentIndex);
       });
     }
 
     function selectTrack(index, e) {
       if (e) addRipple(e);
-      loadTrack(index, true);
+      loadTrack('pujo', index, true);
       setTimeout(toggleDrawer, 150);
+    }
+
+    // ---- Mahalaya list (View 4) — tap a row to play/pause it through the same shared player ----
+    function renderMahalayaList() {
+      const container = document.getElementById('mahalayaContainer');
+      container.innerHTML = playlists.mahalaya.map((t, index) => `
+        <div class="pandal-card mahalaya-card" id="mahalaya-item-${index}" onclick="selectMahalayaTrack(${index}, event)">
+          <div><h4>${t.title}</h4><p>Tap to play</p></div>
+          <button class="mahalaya-play-btn" id="mahalaya-btn-${index}" onclick="selectMahalayaTrack(${index}, event)">▶</button>
+        </div>`).join('');
+      highlightActiveMahalayaItem();
+    }
+
+    function highlightActiveMahalayaItem() {
+      playlists.mahalaya.forEach((t, index) => {
+        const card = document.getElementById(`mahalaya-item-${index}`);
+        const btn = document.getElementById(`mahalaya-btn-${index}`);
+        if (!card || !btn) return;
+        const isCurrent = activeList === 'mahalaya' && index === currentIndex;
+        card.classList.toggle('playing', isCurrent && isPlaying);
+        btn.innerText = (isCurrent && isPlaying) ? '❚❚' : '▶';
+      });
+    }
+
+    function selectMahalayaTrack(index, e) {
+      if (e) e.stopPropagation();
+      if (activeList === 'mahalaya' && index === currentIndex) {
+        togglePlay();
+      } else {
+        loadTrack('mahalaya', index, true);
+      }
     }
 
     // Set everything up on load — nothing plays until the user taps play (autoplay policy).
     setupMediaSession();
     renderPlaylistDrawer();
-    loadTrack(0, false);
+    renderMahalayaList();
+    loadTrack('pujo', 0, false);
 
     function formatTime(seconds) {
       const min = Math.floor(seconds / 60);
@@ -581,6 +682,9 @@
       } else if (mode === 'metro') {
         document.getElementById('metroView').classList.add('active');
         renderMetroList();
+      } else if (mode === 'mahalaya') {
+        document.getElementById('mahalayaView').classList.add('active');
+        highlightActiveMahalayaItem();
       }
     }
 
