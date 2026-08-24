@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sharadiya — Your Durga Pujo Music & Pandal Guide</title>
+  <title>Sharadiya | Durga Pujo Music, Pandal Finder & Metro Guide</title>
   <meta name="description" content="Sharadiya — your Durga Pujo companion. Curated Pujo & Mahalaya music that plays in the background, a pandal finder near you, and Kolkata Metro routes to get there.">
   <meta name="robots" content="index, follow">
   <meta name="google-site-verification" content="kxsct63NyUpITCZHGPy67R81aowEx-8kY5aTGk4lMFk" />
-  <link rel="canonical" href="https://sharadiya.onrender.com/">
+  <link rel="canonical" href="https://sharadiya.diy/">
   <meta name="theme-color" content="#A91D22">
 
-  
+  <!-- Open Graph / social link previews -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Sharadiya — শারদীয়া">
   <meta property="og:description" content="A Durga Pujo companion: Pujo & Mahalaya music, a pandal finder, and Kolkata Metro routes.">
-  <meta property="og:image" content="https://sharadiya.onrender.com/chokhudan.jpg">
-  <meta property="og:url" content="https://sharadiya.onrender.com/">
+  <meta property="og:image" content="https://sharadiya.diy/chokhudan.jpg">
+  <meta property="og:url" content="https://sharadiya.diy/">
   <meta name="twitter:card" content="summary_large_image">
 
   <link rel="icon" type="image/png" href="logo.png" class="site-logo">
@@ -264,7 +264,7 @@
     .playlist-info h5 { font-size: 0.82rem; font-weight: 600; line-height: 1.2; }
     .playlist-info p { font-size: 0.7rem; color: var(--text-muted); }
 
-    
+    /* Compact spacing on short viewports (small phones, landscape) so everything still fits */
     @media (max-height: 700px) {
       .center-title { margin-top: clamp(6px, 2vh, 16px); }
       .english-subtitle { margin-bottom: clamp(8px, 1.6vh, 14px); }
@@ -281,10 +281,44 @@
       .album-art { width: 46px; height: 46px; }
     }
 
+    /* Watch-sized screens (Samsung Internet on Wear OS, third-party watchOS browsers). Many of
+       these are round displays — the bezel curves inward, so it isn't enough to just fit content
+       inside a rectangle; it needs real breathing room on all sides or text clips against the curve. */
+    @media (max-width: 300px), (max-height: 340px) {
+      .ui-container {
+        padding-top: max(14px, env(safe-area-inset-top));
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+        padding-left: max(20px, 14%);
+        padding-right: max(20px, 14%);
+      }
+      .note-pill span { display: none; }
+      .note-pill { padding: 6px; }
+      .clock { font-size: 0.65rem; }
+      .bengali-title { font-size: clamp(1.2rem, 15vw, 1.7rem); }
+      .english-subtitle { font-size: 0.56rem; letter-spacing: 1.5px; margin-bottom: 6px; }
+      .view-switcher { padding: 3px; gap: 2px; }
+      .switch-btn { padding: 5px 7px; font-size: 0.56rem; }
+      .glass-player { padding: 6px 8px; gap: 6px; border-radius: 16px; }
+      .album-art { width: 30px; height: 30px; border-radius: 9px; }
+      .track-title { max-width: 68px; font-size: 0.62rem; }
+      .track-time { display: none; }
+      .ctrl-btn { width: 26px; height: 26px; font-size: 0.78rem; }
+      .play-btn { width: 32px; height: 32px; }
+      .menu-btn { width: 26px; height: 40px; font-size: 0.78rem; }
+      .footer { font-size: 0.52rem; margin-top: 8px; }
+      .pandal-list-panel { padding: 8px; max-height: 34vh; }
+      .pandal-card { padding: 6px; gap: 6px; }
+      .pandal-card h4 { font-size: 0.66rem; line-height: 1.15; }
+      .pandal-card p { font-size: 0.56rem; }
+      .route-btn { padding: 4px 6px; font-size: 0.56rem; }
+      .mahalaya-play-btn { width: 28px; height: 28px; font-size: 0.75rem; }
+    }
+
   </style>
 </head>
 <body>
 
+  <!-- REAL AUDIO ENGINE — this is what actually keeps playing in the background/lock screen -->
   <audio id="mainAudio" preload="metadata" playsinline></audio>
 
   <div class="overlay"></div>
@@ -383,7 +417,9 @@
   </div>
 
   <script>
-    
+    // ---- Playlists: point each `src` at an audio file YOU are allowed to host/stream. ----
+    // (YouTube doesn't expose a direct playable audio URL, and pulling one out programmatically
+    // would break YouTube's Terms of Service — so this needs real, self-hosted/licensed files.)
     const playlists = {
       pujo: [
       { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "logo.png" },
@@ -415,10 +451,10 @@
     };
 
     const audio = document.getElementById('mainAudio');
-    let activeList = 'pujo';           
+    let activeList = 'pujo';           // which playlist ('pujo' or 'mahalaya') is currently loaded
     let currentIndex = 0;
     let isPlaying = false;
-    let wakeLock = null;               
+    let wakeLock = null;               // Screen Wake Lock handle (nice-to-have, not required for audio to keep playing)
 
     const bgImages = ['Sakti.png','chokhudan.jpg', 'alo.jpg', 'dristi.png', 'poribar.jpg' , 'prem.png' , 'pujoalo.jpg' , 'sobarpujo.jpg' ]; 
     let bgIndex = 0;
@@ -443,7 +479,7 @@
     window.addEventListener('resize', updateBackground);
     updateBackground();
 
-    
+    // ---------- Screen Wake Lock (optional — just keeps the screen from auto-dimming while playing) ----------
     async function requestWakeLock() {
       try {
         if ('wakeLock' in navigator) {
@@ -461,7 +497,9 @@
       } catch (e) {}
     }
 
-    
+    // The wake lock itself still gets force-released whenever the tab is hidden/screen locks —
+    // that's fine now, since it's no longer what's keeping playback alive. Just re-acquire it
+    // when the user comes back, so the screen doesn't dim mid-listen.
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' && isPlaying) {
         await requestWakeLock();
@@ -514,7 +552,8 @@
     function nextTrack(e) { if (e) addRipple(e); loadTrack(activeList, currentIndex + 1, true); }
     function prevTrack(e) { if (e) addRipple(e); loadTrack(activeList, currentIndex - 1, true); }
 
-    
+    // These fire from the audio element itself, so state stays correct even if play/pause
+    // was triggered from the lock screen or a Bluetooth headset button, not just our UI.
     audio.addEventListener('play', () => {
       isPlaying = true;
       const playBtn = document.getElementById('mainPlayBtn');
@@ -574,7 +613,7 @@
       setTimeout(toggleDrawer, 150);
     }
 
-    
+    // ---- Mahalaya list (View 4) — tap a row to play/pause it through the same shared player ----
     function renderMahalayaList() {
       const container = document.getElementById('mahalayaContainer');
       container.innerHTML = playlists.mahalaya.map((t, index) => `
@@ -605,7 +644,7 @@
       }
     }
 
-    
+    // Set everything up on load — nothing plays until the user taps play (autoplay policy).
     setupMediaSession();
     renderPlaylistDrawer();
     renderMahalayaList();

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://sharadiya.onrender.com/sitemap.xml
+Sitemap: https://sharadiya.diy/sitemap.xml
