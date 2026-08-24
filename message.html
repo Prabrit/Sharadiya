@@ -115,7 +115,7 @@
 <body>
   <div class="overlay"></div>
 
-  <a href="index.html" class="back-link" aria-label="Back to Sharadiya">
+  <a href="index.html" class="back-link" id="backLink" aria-label="Back to Sharadiya">
     ← Sharadiya
   </a>
 
@@ -164,6 +164,24 @@
       btn.appendChild(circle);
       setTimeout(() => circle.remove(), 600);
     }
+
+    // This page is opened in a new tab (target="_blank") from the homepage, so "going back"
+    // should mean closing this tab to reveal the original tab underneath — not loading a
+    // fresh copy of index.html here, which would reset whatever was playing.
+    document.getElementById('backLink').addEventListener('click', function (e) {
+      e.preventDefault();
+      window.close();
+      // Browsers silently refuse to close tabs a script didn't open (e.g. the user typed the
+      // URL directly, or long-pressed "open in new tab"). If we're still here shortly after,
+      // that happened — fall back to real back-navigation instead of doing nothing.
+      setTimeout(function () {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = 'index.html';
+        }
+      }, 200);
+    });
   </script>
 </body>
 </html>

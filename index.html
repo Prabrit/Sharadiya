@@ -10,7 +10,7 @@
   <link rel="canonical" href="https://sharadiya.onrender.com/">
   <meta name="theme-color" content="#A91D22">
 
-  <!-- Open Graph / social link previews -->
+  
   <meta property="og:type" content="website">
   <meta property="og:title" content="Sharadiya — শারদীয়া">
   <meta property="og:description" content="A Durga Pujo companion: Pujo & Mahalaya music, a pandal finder, and Kolkata Metro routes.">
@@ -264,7 +264,7 @@
     .playlist-info h5 { font-size: 0.82rem; font-weight: 600; line-height: 1.2; }
     .playlist-info p { font-size: 0.7rem; color: var(--text-muted); }
 
-    /* Compact spacing on short viewports (small phones, landscape) so everything still fits */
+    
     @media (max-height: 700px) {
       .center-title { margin-top: clamp(6px, 2vh, 16px); }
       .english-subtitle { margin-bottom: clamp(8px, 1.6vh, 14px); }
@@ -285,7 +285,6 @@
 </head>
 <body>
 
-  <!-- REAL AUDIO ENGINE — this is what actually keeps playing in the background/lock screen -->
   <audio id="mainAudio" preload="metadata" playsinline></audio>
 
   <div class="overlay"></div>
@@ -384,9 +383,7 @@
   </div>
 
   <script>
-    // ---- Playlists: point each `src` at an audio file YOU are allowed to host/stream. ----
-    // (YouTube doesn't expose a direct playable audio URL, and pulling one out programmatically
-    // would break YouTube's Terms of Service — so this needs real, self-hosted/licensed files.)
+    
     const playlists = {
       pujo: [
       { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "logo.png" },
@@ -418,10 +415,10 @@
     };
 
     const audio = document.getElementById('mainAudio');
-    let activeList = 'pujo';           // which playlist ('pujo' or 'mahalaya') is currently loaded
+    let activeList = 'pujo';           
     let currentIndex = 0;
     let isPlaying = false;
-    let wakeLock = null;               // Screen Wake Lock handle (nice-to-have, not required for audio to keep playing)
+    let wakeLock = null;               
 
     const bgImages = ['Sakti.png','chokhudan.jpg', 'alo.jpg', 'dristi.png', 'poribar.jpg' , 'prem.png' , 'pujoalo.jpg' , 'sobarpujo.jpg' ]; 
     let bgIndex = 0;
@@ -446,7 +443,7 @@
     window.addEventListener('resize', updateBackground);
     updateBackground();
 
-    // ---------- Screen Wake Lock (optional — just keeps the screen from auto-dimming while playing) ----------
+    
     async function requestWakeLock() {
       try {
         if ('wakeLock' in navigator) {
@@ -464,9 +461,7 @@
       } catch (e) {}
     }
 
-    // The wake lock itself still gets force-released whenever the tab is hidden/screen locks —
-    // that's fine now, since it's no longer what's keeping playback alive. Just re-acquire it
-    // when the user comes back, so the screen doesn't dim mid-listen.
+    
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' && isPlaying) {
         await requestWakeLock();
@@ -519,8 +514,7 @@
     function nextTrack(e) { if (e) addRipple(e); loadTrack(activeList, currentIndex + 1, true); }
     function prevTrack(e) { if (e) addRipple(e); loadTrack(activeList, currentIndex - 1, true); }
 
-    // These fire from the audio element itself, so state stays correct even if play/pause
-    // was triggered from the lock screen or a Bluetooth headset button, not just our UI.
+    
     audio.addEventListener('play', () => {
       isPlaying = true;
       const playBtn = document.getElementById('mainPlayBtn');
@@ -580,7 +574,7 @@
       setTimeout(toggleDrawer, 150);
     }
 
-    // ---- Mahalaya list (View 4) — tap a row to play/pause it through the same shared player ----
+    
     function renderMahalayaList() {
       const container = document.getElementById('mahalayaContainer');
       container.innerHTML = playlists.mahalaya.map((t, index) => `
@@ -611,7 +605,7 @@
       }
     }
 
-    // Set everything up on load — nothing plays until the user taps play (autoplay policy).
+    
     setupMediaSession();
     renderPlaylistDrawer();
     renderMahalayaList();
