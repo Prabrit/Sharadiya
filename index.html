@@ -396,7 +396,7 @@
       </div>
     </div>
 
-    <div class="footer">Made by prabrit with love ❤️</div>
+    <div class="footer">Made by prabrit with love ❤️ v1.7</div>
   </div>
 
   <div class="drawer" id="playlistDrawer">
@@ -656,7 +656,7 @@
       minutes = minutes < 10 ? '0' + minutes : minutes;
       document.getElementById('liveClock').innerText = `${hours}:${minutes} ${ampm}`;
 
-      const pujoDate = new Date('October 17, 2026 00:00:00').getTime();
+      const pujoDate = new Date('October 16, 2026 00:00:00').getTime();
       const diff = pujoDate - now.getTime();
       const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
 
@@ -718,48 +718,49 @@
       document.getElementById('playlistDrawer').classList.toggle('open');
     }
 
-    const pandals = [
-      { name: "Sree Bhumi Sporting Club", location: "Lake Town", lat: 22.5975, lng: 88.3980, metro: "Phoolbagan Metro" },
-      { name: "Dum Dum Park Tarun Sangha", location: "Dum Dum Park", lat: 22.6086, lng: 88.4069, metro: "Belgachia Metro" },
-      { name: "Dum Dum Park Bharat Chakra", location: "Dum Dum Park", lat: 22.6094, lng: 88.4072, metro: "Belgachia Metro" },
-      { name: "Lake Town Adhibasi Vrinda", location: "Lake Town", lat: 22.6022, lng: 88.4005, metro: "Belgachia Metro" },
-      { name: "Bagbazar Sarbojonin", location: "Bagbazar", lat: 22.6025, lng: 88.3712, metro: "Shyambazar Metro" },
-      { name: "Tala Prattoy", location: "Tala", lat: 22.6075, lng: 88.3764, metro: "Shyambazar Metro" },
-      { name: "Kumartuli Park", location: "Kumartuli", lat: 22.5991, lng: 88.3621, metro: "Shovabazar Sutanuti Metro" },
-      { name: "Ahiritola Sarbojonin", location: "Ahiritola", lat: 22.5959, lng: 88.3582, metro: "Shovabazar Sutanuti Metro" },
-      { name: "College Square", location: "College Street", lat: 22.5762, lng: 88.3634, metro: "Central Metro" },
-      { name: "Mohammad Ali Park", location: "MG Road", lat: 22.5802, lng: 88.3585, metro: "Central Metro" },
-      { name: "Hatibagan Sarbojonin", location: "Hatibagan", lat: 22.5944, lng: 88.3720, metro: "Shyambazar Metro" },
-      { name: "Kashi Bose Lane", location: "Kashi Bose Lane", lat: 22.5909, lng: 88.3689, metro: "Girish Park Metro" },
-      { name: "Simla Byayam Samity", location: "Simla", lat: 22.5851, lng: 88.3645, metro: "Girish Park Metro" },
-      { name: "Bidhan Sarani Atlas Club", location: "Shyambazar", lat: 22.5997, lng: 88.3729, metro: "Shyambazar Metro" },
-      { name: "Maniktala Chaltabagan Lohapatty", location: "Maniktala", lat: 22.5849, lng: 88.3722, metro: "Girish Park Metro" },
-      { name: "Santosh Mitra Square", location: "Bowbazar", lat: 22.5684, lng: 88.3656, metro: "Central Metro" },
-      { name: "Sealdah Railway Athletic Club", location: "Sealdah", lat: 22.5706, lng: 88.3719, metro: "Sealdah Metro" },
-      { name: "Kankurgachi Jubak Brinda", location: "Kankurgachi", lat: 22.5794, lng: 88.3881, metro: "Phoolbagan Metro" },
-      { name: "Telengabagan Durgotsab", location: "Ultadanga", lat: 22.5949, lng: 88.3853, metro: "Salt Lake Stadium Metro" },
-      { name: "Karbagan Sarbojanin", location: "Ultadanga", lat: 22.5952, lng: 88.3843, metro: "Salt Lake Stadium Metro" },
-      { name: "Deshapriya Park", location: "Ballygunge", lat: 22.5185, lng: 88.3512, metro: "Kalighat Metro" },
-      { name: "Tridhara Sammilani", location: "Manoharpukur", lat: 22.5152, lng: 88.3486, metro: "Kalighat Metro" },
-      { name: "Ekdalia Evergreen", location: "Gariahat", lat: 22.5255, lng: 88.3654, metro: "Kalighat Metro" },
-      { name: "Singhi Park", location: "Gariahat", lat: 22.5268, lng: 88.3640, metro: "Kalighat Metro" },
-      { name: "Suruchi Sangha", location: "New Alipore", lat: 22.5186, lng: 88.3298, metro: "Rabindra Sarobar Metro" },
-      { name: "Chetla Agrani", location: "Chetla", lat: 22.5188, lng: 88.3375, metro: "Kalighat Metro" },
-      { name: "Mudiali Club", location: "Mudiali", lat: 22.5098, lng: 88.3444, metro: "Rabindra Sarobar Metro" },
-      { name: "Badamtala Ashar Sangha", location: "Kalighat", lat: 22.5222, lng: 88.3438, metro: "Kalighat Metro" },
-      { name: "Bosepukur Sitala Mandir", location: "Kasba", lat: 22.5135, lng: 88.3842, metro: "Kalighat Metro" },
-      { name: "Jodhpur Park", location: "Jodhpur Park", lat: 22.5048, lng: 88.3657, metro: "Rabindra Sarobar Metro" },
-      { name: "66 Pally", location: "Kalighat", lat: 22.5181, lng: 88.3428, metro: "Kalighat Metro" },
-      { name: "Naktala Udayan Sangha", location: "Naktala", lat: 22.4743, lng: 88.3666, metro: "Gitanjali Metro" },
-      { name: "Ballygunge Cultural Association", location: "Ballygunge", lat: 22.5162, lng: 88.3558, metro: "Kalighat Metro" },
-      { name: "Hindustan Park", location: "Hindustan Park", lat: 22.4993, lng: 88.3557, metro: "Kalighat Metro" },
-      { name: "Salt Lake FD Block", location: "Sector 3, Salt Lake", lat: 22.5835, lng: 88.4123, metro: "Karunamoyee Metro" },
-      { name: "Salt Lake BJ Block", location: "Sector 2, Salt Lake", lat: 22.5907, lng: 88.4266, metro: "City Centre Metro" },
-      { name: "Salt Lake CE Block", location: "Sector 1, Salt Lake", lat: 22.5943, lng: 88.4129, metro: "City Centre Metro" },
-      { name: "Behala Nutan Dal", location: "Behala", lat: 22.5002, lng: 88.3203, metro: "Taratala Metro" },
-      { name: "Barisha Sarbojonin", location: "Paschim Barisha", lat: 22.4799, lng: 88.3081, metro: "Sakherbazar Metro" },
-      { name: "Behala Club", location: "Behala", lat: 22.5053, lng: 88.3141, metro: "Behala Bazar Metro" }
-    ];
+  const pandals = [
+  { name: "Sree Bhumi Sporting Club", location: "Lake Town", lat: 22.5989, lng: 88.4029, metro: "City Centre Metro" },
+  { name: "Dum Dum Park Tarun Sangha", location: "Dum Dum Park", lat: 22.6101, lng: 88.4115, metro: "Dum Dum Metro" },
+  { name: "Dum Dum Park Bharat Chakra", location: "Dum Dum Park", lat: 22.6108, lng: 88.4146, metro: "Dum Dum Metro" },
+  { name: "Lake Town Adhibasi Vrinda", location: "Lake Town", lat: 22.6045, lng: 88.4040, metro: "Belgachia Metro" },
+  { name: "Bagbazar Sarbojonin", location: "Bagbazar", lat: 22.6045, lng: 88.3656, metro: "Shyambazar Metro" },
+  { name: "Tala Prattoy", location: "Tala", lat: 22.6096, lng: 88.3836, metro: "Belgachia Metro" },
+  { name: "Kumartuli Park", location: "Kumartuli", lat: 22.5990, lng: 88.3615, metro: "Shovabazar Sutanuti Metro" },
+  { name: "Ahiritola Sarbojonin", location: "Ahiritola", lat: 22.5946, lng: 88.3604, metro: "Shovabazar Sutanuti Metro" },
+  { name: "College Square", location: "College Street", lat: 22.5745, lng: 88.3645, metro: "Central Metro" },
+  { name: "Mohammad Ali Park", location: "MG Road", lat: 22.5772, lng: 88.3607, metro: "MG Road Metro" },
+  { name: "Hatibagan Sarbojonin", location: "Hatibagan", lat: 22.5944, lng: 88.3720, metro: "Shyambazar Metro" },
+  { name: "Kashi Bose Lane", location: "Kashi Bose Lane", lat: 22.5909, lng: 88.3689, metro: "Girish Park Metro" },
+  { name: "Simla Byayam Samity", location: "Simla", lat: 22.5851, lng: 88.3645, metro: "Girish Park Metro" },
+  { name: "Bidhan Sarani Atlas Club", location: "Shyambazar", lat: 22.5997, lng: 88.3729, metro: "Shyambazar Metro" },
+  { name: "Maniktala Chaltabagan Lohapatty", location: "Maniktala", lat: 22.5849, lng: 88.3722, metro: "Girish Park Metro" },
+  { name: "Santosh Mitra Square", location: "Bowbazar", lat: 22.5660, lng: 88.3657, metro: "Sealdah Metro" },
+  { name: "Sealdah Railway Athletic Club", location: "Sealdah", lat: 22.5706, lng: 88.3719, metro: "Sealdah Metro" },
+  { name: "Kankurgachi Jubak Brinda", location: "Kankurgachi", lat: 22.5794, lng: 88.3881, metro: "Phoolbagan Metro" },
+  { name: "Telengabagan Durgotsab", location: "Ultadanga", lat: 22.5949, lng: 88.3853, metro: "Shyambazar Metro" },
+  { name: "Karbagan Sarbojanin", location: "Ultadanga", lat: 22.5952, lng: 88.3843, metro: "Shyambazar Metro" },
+  { name: "Deshapriya Park", location: "Ballygunge", lat: 22.5186, lng: 88.3535, metro: "Kalighat Metro" },
+  { name: "Tridhara Sammilani", location: "Manoharpukur", lat: 22.5195, lng: 88.3554, metro: "Kalighat Metro" },
+  { name: "Ekdalia Evergreen", location: "Gariahat", lat: 22.5212, lng: 88.3666, metro: "Kalighat Metro" },
+  { name: "Singhi Park", location: "Gariahat", lat: 22.5209, lng: 88.3627, metro: "Jatin Das Park Metro" },
+  { name: "Suruchi Sangha", location: "New Alipore", lat: 22.5090, lng: 88.3340, metro: "Rabindra Sarobar Metro" },
+  { name: "Chetla Agrani", location: "Chetla", lat: 22.5164, lng: 88.3371, metro: "Kalighat Metro" },
+  { name: "Mudiali Club", location: "Mudiali", lat: 22.5102, lng: 88.3463, metro: "Rabindra Sarobar Metro" },
+  { name: "Badamtala Ashar Sangha", location: "Kalighat", lat: 22.5180, lng: 88.3437, metro: "Kalighat Metro" },
+  { name: "Bosepukur Sitala Mandir", location: "Kasba", lat: 22.5192, lng: 88.3849, metro: "Kavi Sukanta Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Jodhpur Park", location: "Jodhpur Park", lat: 22.5048, lng: 88.3657, metro: "Rabindra Sarobar Metro" },
+  { name: "66 Pally", location: "Kalighat", lat: 22.5181, lng: 88.3428, metro: "Kalighat Metro" },
+  { name: "Naktala Udayan Sangha", location: "Naktala", lat: 22.4743, lng: 88.3666, metro: "Gitanjali Metro" },
+  { name: "Ballygunge Cultural Association", location: "Ballygunge", lat: 22.5162, lng: 88.3558, metro: "Kalighat Metro" },
+  { name: "Hindustan Park", location: "Hindustan Park", lat: 22.517752597926695, lng: 88.36209095911478, metro: "Mahanayak Uttam Kumar Metro" },
+  { name: "Salt Lake FD Block", location: "Sector 3, Salt Lake", lat: 22.5835, lng: 88.4123, metro: "City Centre Metro" },
+  { name: "Salt Lake BJ Block", location: "Sector 2, Salt Lake", lat: 22.5907, lng: 88.4266, metro: "Karunamoyee Metro" },
+  { name: "Salt Lake CE Block", location: "Sector 1, Salt Lake", lat: 22.5943, lng: 88.4129, metro: "Central Park Metro" },
+  { name: "Behala Nutan Dal", location: "Behala", lat: 22.5002, lng: 88.3203, metro: "Behala Bazar Metro" },
+  { name: "Barisha Sarbojonin", location: "Paschim Barisha", lat: 22.4799, lng: 88.3081, metro: "Sakherbazar Metro" },
+  { name: "Behala Club", location: "Behala", lat: 22.5053, lng: 88.3141, metro: "Behala Bazar Metro" }
+];
+
 
     function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
       const R = 6371; 
