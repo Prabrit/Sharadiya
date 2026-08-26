@@ -18,7 +18,8 @@
   <meta property="og:url" content="https://sharadiya.diy/">
   <meta name="twitter:card" content="summary_large_image">
 
-  <link rel="icon" type="image/png" href="logo.png" class="site-logo">
+  <link rel="icon" href="logo.png" type="image/png">
+  <link rel="apple-touch-icon" href="logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tiro+Bangla:ital@0;1&family=Baloo+Da+2:wght@500;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
@@ -81,7 +82,21 @@
     .note-icon { color: var(--accent-gold); filter: drop-shadow(0 0 4px rgba(212,175,55,.6)); flex-shrink: 0; }
 
     .clock-container { display: flex; flex-direction: column; align-items: flex-end; }
+    .clock-row { display: flex; align-items: center; gap: 8px; }
     .clock { font-weight: 500; font-size: 0.9rem; letter-spacing: 1px; }
+
+    .online-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600; color: #fff;
+    }
+    .online-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      background: #3ddc73; box-shadow: 0 0 6px rgba(61,220,115,.8);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
     .countdown-bar {
       font-family: 'Tiro Bangla', serif;
@@ -292,6 +307,8 @@
       .note-pill span { display: none; }
       .note-pill { padding: 6px; }
       .clock { font-size: 0.65rem; }
+      .online-badge { padding: 3px 6px; gap: 3px; font-size: 0.56rem; }
+      .online-badge .online-label { display: none; }
       .bengali-title { font-size: clamp(1.2rem, 15vw, 1.7rem); }
       .english-subtitle { font-size: 0.56rem; letter-spacing: 1.5px; margin-bottom: 6px; }
       .view-switcher { padding: 3px; gap: 2px; }
@@ -329,7 +346,14 @@
         <span>A Note</span>
       </a>
       <div class="clock-container">
-        <div class="clock" id="liveClock">8:51 PM</div>
+        <div class="clock-row">
+          <div class="online-badge" id="onlineBadge" title="People with the site open right now">
+            <span class="online-dot"></span>
+            <span id="onlineCount">–</span>
+            <span class="online-label">online</span>
+          </div>
+          <div class="clock" id="liveClock">8:51 PM</div>
+        </div>
       </div>
     </nav>
 
@@ -832,6 +856,56 @@
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'C' || e.key === 'c' || e.key === 'J' || e.key === 'j')) e.preventDefault();
       if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) e.preventDefault();
     });
+  </script>
+
+  <script type="module">
+    // Live "online now" counter, powered by Firebase Realtime Database presence.
+    // 1) Fill in YOUR_FIREBASE_CONFIG below with the config object from your
+    //    Firebase project (Project settings > General > Your apps > Web app).
+    // 2) Enable Realtime Database + Anonymous Authentication for the project.
+    // 3) Set the Realtime Database rules shown in the setup guide.
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
+    import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
+    import { getDatabase, ref, onValue, set, onDisconnect } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCYd0Loe_Ehgt5lpInethhMZHUi8c0Uv-A",
+      authDomain: "sharadiya-5432e.firebaseapp.com",
+      databaseURL: "https://sharadiya-5432e-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "sharadiya-5432e",
+      storageBucket: "sharadiya-5432e.firebasestorage.app",
+      messagingSenderId: "815808970907",
+      appId: "1:815808970907:web:872d421469190617d7863e"
+    };
+
+    try {
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getDatabase(app);
+      const onlineCountEl = document.getElementById('onlineCount');
+
+      signInAnonymously(auth).catch((err) => console.warn('Presence sign-in failed:', err.message));
+
+      onAuthStateChanged(auth, (user) => {
+        if (!user) return;
+        const myStatusRef = ref(db, 'status/' + user.uid);
+        const connectedRef = ref(db, '.info/connected');
+
+        onValue(connectedRef, (snap) => {
+          if (snap.val() === false) return;
+          onDisconnect(myStatusRef).remove().then(() => {
+            set(myStatusRef, true);
+          });
+        });
+      });
+
+      onValue(ref(db, 'status'), (snapshot) => {
+        const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+        if (onlineCountEl) onlineCountEl.textContent = count;
+      });
+    } catch (err) {
+      console.warn('Online counter not active — add your Firebase config to enable it.', err);
+    }
   </script>
 </body>
 </html>
