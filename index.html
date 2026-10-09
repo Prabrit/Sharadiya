@@ -443,15 +443,18 @@
       pujo: [
       { title: "Aham Rudre", src: "pujo_songs/aham rudre.mp3", art: "logo.png" },
       { title: "Chaarpase Alo Hok", src: "pujo_songs/Charpase Alo Hok.mp3", art: "logo.png" },
+      { title: "Durga Ma Asche", src: "pujo_songs/Dugga Ma Asche.mp3", art: "logo.png" },
       { title: "Madhukaitava Vidhwangsi", src: "pujo_songs/Madhukaitava Vidhwangsi.mp3", art: "logo.png" },
       { title: "Jaago Uma", src: "pujo_songs/Jaago Uma.mp3", art: "logo.png" },
       { title: "DHAK BAJA KASHOR BAJA", src: "pujo_songs/DHAK BAJA KASHOR BAJA.mp3", art: "logo.png" },
       { title: "Aaj Baaje", src: "pujo_songs/Aaj Baaje.mp3", art: "logo.png" },
       { title: "Dugga Elo", src: "pujo_songs/Dugga Elo.mp3", art: "logo.png" },
       { title: "Agomonir Gaan", src: "pujo_songs/Agomonir Gaan.mp3", art: "logo.png" },
+      { title: "Ashtamite Tomar Paray", src: "pujo_songs/Ashtamite Tomar Paray ｜ অষ্টমীতে তোমার পাড়ায় ｜ Soumya ｜ Arunima ｜ Chirkut ｜ Bawalfather ｜ Jyoti [yD0dpeS1eak].mp3", art: "logo.png" },
       { title: "Esho Naba Rupe", src: "pujo_songs/Esho Naba Rupe .mp3", art: "logo.png" },
       { title: "Dhaker Taley", src: "pujo_songs/Dhaker Taley.mp3", art: "logo.png" },
       { title: "Durge Durge Durgatinashini", src: "pujo_songs/Durge Durge Durgatinashini .mp3", art: "logo.png" },
+      { title: "Shuvo Shuvo", src: "pujo_songs/shuvo shuvo.mp3", art: "logo.png" },
       { title: "Gouri Elo", src: "pujo_songs/Gouri Elo.mp3", art: "logo.png" },
       { title: "Jago Jogmaya Jago Mrinmoyee", src: "pujo_songs/Jago Jogmaya Jago Mrinmoyee.mp3", art: "logo.png" },
       { title: "Pujar Gaan", src: "pujo_songs/Pujar Gaan.mp3", art: "logo.png" },
@@ -672,6 +675,45 @@
       return min + ":" + (sec < 10 ? "0" : "") + sec;
     }
 
+    // West Bengal calendar dates for 2026 — update every year
+    const PUJO_DATES_2026 = {
+      mahalaya: [2026, 10, 10],
+      shashthi: [2026, 10, 17],
+      saptami:  [2026, 10, 18],
+      ashtami:  [2026, 10, 19],
+      nabami:   [2026, 10, 20],
+      dashami:  [2026, 10, 21]
+    };
+
+    function istDateKey() {
+      const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+      return ist.getUTCFullYear() * 10000 + (ist.getUTCMonth() + 1) * 100 + ist.getUTCDate();
+    }
+    function dateKey([y, m, d]) { return y * 10000 + m * 100 + d; }
+    function daysBetween(targetKey, todayKey) {
+      const p = k => [Math.floor(k / 10000), Math.floor((k % 10000) / 100), k % 100];
+      const [ty, tm, td] = p(todayKey), [gy, gm, gd] = p(targetKey);
+      return Math.round((Date.UTC(gy, gm - 1, gd) - Date.UTC(ty, tm - 1, td)) / 86400000);
+    }
+
+    function getPujoStatusText() {
+      const today = istDateKey();
+      const D = PUJO_DATES_2026;
+      const mahalaya = dateKey(D.mahalaya), shashthi = dateKey(D.shashthi),
+            saptami = dateKey(D.saptami), ashtami = dateKey(D.ashtami),
+            nabami = dateKey(D.nabami), dashami = dateKey(D.dashami);
+
+      if (today === mahalaya) return '🙏 শুভ মহালয়া';
+      if (today === shashthi) return 'আজ ষষ্ঠী';
+      if (today === saptami)  return 'আজ মহাসপ্তমী';
+      if (today === ashtami)  return 'আজ মহাষ্টমী';
+      if (today === nabami)   return 'আজ মহানবমী';
+      if (today === dashami)  return 'শুভ বিজয়া দশমী 🙏';
+      if (today > dashami)    return 'শুভ শারদীয়া!';
+      if (today < mahalaya)   return `মহালয়া আসতে আর ${daysBetween(mahalaya, today)} দিন বাকি`;
+      return `দুর্গাপুজোর আর ${daysBetween(shashthi, today)} দিন বাকি`;
+    }
+
     function updateTimeAndCountdown() {
       const now = new Date();
       let hours = now.getHours(), minutes = now.getMinutes();
@@ -680,14 +722,7 @@
       minutes = minutes < 10 ? '0' + minutes : minutes;
       document.getElementById('liveClock').innerText = `${hours}:${minutes} ${ampm}`;
 
-      const pujoDate = new Date('October 16, 2026 00:00:00').getTime();
-      const diff = pujoDate - now.getTime();
-      const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-      const countdownText = daysLeft > 0 
-        ? `দুর্গাপুজোর আর ${daysLeft} দিন বাকি` 
-        : "শুভ শারদীয়া!";
-      document.getElementById('pujoCountdown').innerText = countdownText;
+      document.getElementById('pujoCountdown').innerText = getPujoStatusText();
     }
     setInterval(updateTimeAndCountdown, 1000); 
     updateTimeAndCountdown();
