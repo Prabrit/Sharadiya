@@ -703,12 +703,12 @@
             saptami = dateKey(D.saptami), ashtami = dateKey(D.ashtami),
             nabami = dateKey(D.nabami), dashami = dateKey(D.dashami);
 
-      if (today === mahalaya) return '🙏 শুভ মহালয়া';
+      if (today === mahalaya) return 'শুভ মহালয়া';
       if (today === shashthi) return 'আজ ষষ্ঠী';
       if (today === saptami)  return 'আজ মহাসপ্তমী';
       if (today === ashtami)  return 'আজ মহাষ্টমী';
       if (today === nabami)   return 'আজ মহানবমী';
-      if (today === dashami)  return 'শুভ বিজয়া দশমী 🙏';
+      if (today === dashami)  return 'শুভ বিজয়া দশমী';
       if (today > dashami)    return 'শুভ শারদীয়া!';
       if (today < mahalaya)   return `মহালয়া আসতে আর ${daysBetween(mahalaya, today)} দিন বাকি`;
       return `দুর্গাপুজোর আর ${daysBetween(shashthi, today)} দিন বাকি`;
