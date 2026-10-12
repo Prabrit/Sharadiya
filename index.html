@@ -22,6 +22,10 @@
   <link rel="apple-touch-icon" href="logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tiro+Bangla:ital@0;1&family=Baloo+Da+2:wght@500;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- Leaflet (free, OpenStreetMap-based maps) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
     :root {
       --glass-bg: rgba(255, 255, 255, 0.05);
@@ -364,11 +368,64 @@
       .mahalaya-play-btn { width: 28px; height: 28px; font-size: 0.75rem; }
     }
 
+    /* ===== Full-screen map background (Pandals + Metro tabs) ===== */
+    #bgMap { position: fixed; inset: 0; z-index: 0; display: none; background: #e9e6df; }
+    body.map-mode #bgMap { display: block; }
+    body.map-mode { background-color: #e9e6df; }
+    #bgMap .leaflet-top { margin-top: 56px; }
+    #bgMap .leaflet-control-attribution { font-size: 10px; }
+
+    /* let the map receive taps/drags; only the real controls catch pointer events */
+    body.map-mode .overlay {
+      background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 24%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.45) 100%);
+      pointer-events: none;
+    }
+    body.map-mode .ui-container { pointer-events: none; }
+    body.map-mode .note-pill,
+    body.map-mode .online-badge,
+    body.map-mode .view-switcher,
+    body.map-mode .pandal-list-panel { pointer-events: auto; }
+
+    /* header + list keep the app's dark glass look, floating over the bright map */
+    body.map-mode .countdown-bar,
+    body.map-mode .english-subtitle { display: none; }
+    body.map-mode .center-title { margin-top: 4px; }
+    body.map-mode .bengali-title {
+      font-size: clamp(1.6rem, 6vw, 2.4rem); margin-bottom: 8px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.6);
+    }
+    body.map-mode .note-pill,
+    body.map-mode .online-badge,
+    body.map-mode .view-switcher { background: rgba(32, 14, 16, 0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    body.map-mode .clock { text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+    body.map-mode .pandal-list-panel { background: rgba(32, 14, 16, 0.82); max-height: min(300px, 38vh); }
+    body.map-mode .footer { text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
+
+    .pandal-card.selectable { cursor: pointer; transition: background .2s ease, border-color .2s ease; }
+    .pandal-card.selectable:hover { background: rgba(0,0,0,0.32); }
+    .pandal-card.selected { background: rgba(212, 175, 55, 0.18); border-color: var(--accent-gold); }
+
+    /* map pins */
+    .pin-wrap { background: none; border: none; }
+    .pin-wrap svg, .pin-wrap img {
+      display: block; overflow: visible;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
+      transform-origin: 50% 100%; transition: transform .15s ease, filter .15s ease;
+    }
+    .pin-wrap.selected svg, .pin-wrap.selected img {
+      transform: scale(1.3);
+      filter: drop-shadow(0 0 6px #D4AF37) drop-shadow(0 2px 2px rgba(0,0,0,0.4));
+    }
+
+    .leaflet-popup-content { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.8rem; line-height: 1.45; margin: 10px 14px; }
+    .leaflet-popup-content a { color: var(--primary-crimson); font-weight: 600; }
   </style>
 </head>
 <body>
 
   <audio id="mainAudio" preload="metadata" playsinline></audio>
+
+  <div id="bgMap"></div>
 
   <div class="overlay"></div>
 
@@ -447,7 +504,7 @@
         
         <div id="metroView" class="view-panel">
             <div class="pandal-list-panel">
-              <div style="font-size:0.8rem; margin-bottom:10px; color:var(--text-muted);">Nearest Metro Stations for Pandals</div>
+              <div style="font-size:0.8rem; margin-bottom:10px; color:var(--text-muted);">Nearest Metro Stations for Pandals · tap one to see the walk from the station</div>
               <div class="search-wrap">
               <div class="search-box">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -469,7 +526,7 @@
       </div>
     </div>
 
-    <div class="footer">Made by prabrit with love ❤️ v1.9</div>
+    <div class="footer">Made by prabrit with love ❤️ v1.7</div>
   </div>
 
   <div class="drawer" id="playlistDrawer">
@@ -528,6 +585,10 @@
     let bgIndex = 0;
 
     function updateBackground() {
+      if (document.body.classList.contains('map-mode')) {   // Pandals / Metro: the map is the background
+        document.body.style.backgroundImage = 'none';
+        return;
+      }
       const isLandscape = window.matchMedia("(orientation: landscape)").matches;
       const isLaptop = window.innerWidth > 768;
 
@@ -803,14 +864,18 @@
       document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
+      document.body.classList.toggle('map-mode', mode === 'parikrama' || mode === 'metro');
+      updateBackground();
 
       if(mode === 'player') {
         document.getElementById('playerView').classList.add('active');
       } else if (mode === 'parikrama') {
         document.getElementById('parikramaView').classList.add('active');
+        ensureMap('parikrama');
         getUserLocation();
       } else if (mode === 'metro') {
         document.getElementById('metroView').classList.add('active');
+        ensureMap('metro');
         renderMetroList();
       } else if (mode === 'mahalaya') {
         document.getElementById('mahalayaView').classList.add('active');
@@ -879,30 +944,433 @@
       return R * c; 
     }
 
+    // ================= Road distances + maps =================
+    // Straight-line (Haversine) above is kept only as a fallback.
+    // Road distance: OSRM public routing (OpenStreetMap data, no API key).
+    // Maps: Leaflet + OpenStreetMap tiles. Metro walk: OSM foot routing + Nominatim geocoding.
+    pandals.forEach((p, i) => { p.id = i; });
+
+    const KOLKATA_CENTER = [22.5726, 88.3639];
+    let userPos = null;            // { lat, lng }
+    let roadFetchedAt = 0;         // timestamp of last successful road-distance fetch
+    let roadRequestToken = 0;
+    const walkInfo = {};           // pandal id -> { km, mins } (metro station -> pandal, on foot)
+
+    function formatDist(km) {
+      return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km';
+    }
+
+    async function fetchJson(url, ms) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms || 9000);
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    // One request: distance by road from the user to every pandal.
+    async function fetchRoadDistancesKm(lat, lng) {
+      const coords = [[lng, lat]].concat(pandals.map(p => [p.lng, p.lat]))
+        .map(c => c.join(',')).join(';');
+      const data = await fetchJson(
+        'https://router.project-osrm.org/table/v1/driving/' + coords + '?sources=0&annotations=distance'
+      );
+      if (data.code !== 'Ok' || !data.distances || !data.distances[0]) throw new Error('OSRM: ' + data.code);
+      return data.distances[0].slice(1).map(m => (typeof m === 'number' ? m / 1000 : null));
+    }
+
+    function applyDistances(roadKm) {
+      pandals.forEach((p, i) => {
+        p.straightKm = getDistanceFromLatLonInKm(userPos.lat, userPos.lng, p.lat, p.lng);
+        const r = roadKm ? roadKm[i] : null;
+        p.isRoad = typeof r === 'number';
+        p.distance = p.isRoad ? r : p.straightKm;
+      });
+    }
+
+    function sortedByDistance() {
+      return pandals.slice().sort((a, b) => a.distance - b.distance);
+    }
+
     function getUserLocation() {
       const statusMsg = document.getElementById('statusMsg');
 
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition((position) => {
-          const userLat = position.coords.latitude;
-          const userLng = position.coords.longitude;
+      // Reuse a recent road-distance result instead of re-asking every tab switch
+      if (userPos && Date.now() - roadFetchedAt < 5 * 60 * 1000) {
+        renderPandals(sortedByDistance());
+        return;
+      }
 
-          let pandalsWithDistance = pandals.map(p => {
-            p.distance = getDistanceFromLatLonInKm(userLat, userLng, p.lat, p.lng);
-            return p;
-          }).sort((a, b) => a.distance - b.distance);
-
-          statusMsg.innerText = "Showing pandals nearest to you";
-          renderPandals(pandalsWithDistance);
-        }, () => {
-          statusMsg.innerText = "Location access denied. Showing default list.";
-          renderPandals(pandals);
-        });
-      } else {
+      if (!('geolocation' in navigator)) {
         statusMsg.innerText = "Geolocation not supported. Showing default list.";
         renderPandals(pandals);
+        return;
+      }
+
+      statusMsg.innerText = 'Finding your location…';
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        userPos = { lat: position.coords.latitude, lng: position.coords.longitude };
+
+        // 1) show straight-line results immediately
+        applyDistances(null);
+        renderPandals(sortedByDistance());
+        updateUserMarker();
+        if (MAPS.parikrama.map && MAPS.parikrama.selected === null) fitAll('parikrama');
+
+        // 2) upgrade to real road distances
+        statusMsg.innerText = 'Calculating road distances…';
+        const token = ++roadRequestToken;
+        try {
+          const roadKm = await fetchRoadDistancesKm(userPos.lat, userPos.lng);
+          if (token !== roadRequestToken) return;
+          applyDistances(roadKm);
+          roadFetchedAt = Date.now();
+          statusMsg.innerText = 'Showing pandals nearest to you by road';
+        } catch (err) {
+          if (token !== roadRequestToken) return;
+          console.warn('Road routing unavailable, using straight-line distance:', err);
+          statusMsg.innerText = 'Road routing unavailable — showing straight-line distances';
+        }
+        renderPandals(sortedByDistance());
+      }, () => {
+        statusMsg.innerText = "Location access denied. Showing default list.";
+        renderPandals(pandals);
+      }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+    }
+
+    // ---- Pin icons ----
+    // To use your own artwork instead, put a path here, e.g. { pujo: 'pujo-pin.png', metro: 'metro-pin.png' }
+    const PIN_IMAGES = { pujo: null, metro: null };
+    const PIN_SIZE = [32, 42];
+    const PIN_BODY = 'M16 41C16 41 3 26 3 15a13 13 0 0 1 26 0C29 26 16 41 16 41Z';
+
+    // Pujo pin: crimson pin with a gold-cream disc and a trishul
+    const PUJO_PIN_SVG =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">' +
+      '<path d="' + PIN_BODY + '" fill="#A91D22" stroke="#fff" stroke-width="2"/>' +
+      '<circle cx="16" cy="15" r="9.5" fill="#FFF4D6"/>' +
+      '<g fill="#A91D22" stroke="#A91D22" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M16 22V9" fill="none"/>' +
+        '<path d="M11.8 9.5V12.5Q11.8 15.2 16 15.2Q20.2 15.2 20.2 12.5V9.5" fill="none"/>' +
+        '<path d="M16 6.2L17.5 9.2H14.5Z"/><path d="M11.8 7L13.3 10H10.3Z"/><path d="M20.2 7L21.7 10H18.7Z"/>' +
+      '</g></svg>';
+
+    // Metro pin: black pin with a white disc and a train front
+    const METRO_PIN_SVG =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">' +
+      '<path d="' + PIN_BODY + '" fill="#111" stroke="#fff" stroke-width="2"/>' +
+      '<circle cx="16" cy="15" r="9.5" fill="#fff"/>' +
+      '<rect x="11" y="7.5" width="10" height="12" rx="2.4" fill="#111"/>' +
+      '<rect x="12.6" y="9.2" width="6.8" height="4.2" rx="1" fill="#fff"/>' +
+      '<circle cx="13.7" cy="16.4" r="1" fill="#fff"/><circle cx="18.3" cy="16.4" r="1" fill="#fff"/>' +
+      '<path d="M13 21.5L11.6 23.8M19 21.5L20.4 23.8M12.6 22.6H19.4" stroke="#111" stroke-width="1.3" stroke-linecap="round" fill="none"/>' +
+      '</svg>';
+
+    function pinIcon(kind) {
+      const html = PIN_IMAGES[kind]
+        ? '<img src="' + PIN_IMAGES[kind] + '" alt="" style="width:' + PIN_SIZE[0] + 'px;height:' + PIN_SIZE[1] + 'px;object-fit:contain">'
+        : (kind === 'metro' ? METRO_PIN_SVG : PUJO_PIN_SVG);
+      return L.divIcon({
+        html: html, className: 'pin-wrap', iconSize: PIN_SIZE,
+        iconAnchor: [16, 41], popupAnchor: [0, -38], tooltipAnchor: [0, -38]
+      });
+    }
+
+    function setPinSelected(mk, on) {
+      const el = mk && mk.getElement && mk.getElement();
+      if (el) el.classList.toggle('selected', on);
+      if (mk) mk.setZIndexOffset(on ? 1000 : 0);
+    }
+
+    // ---- Maps: one full-screen map behind the UI, shared by the Pandals and Metro tabs ----
+    const sharedMarkers = {};
+    const MAPS = {
+      parikrama: { map: null, markers: sharedMarkers, route: null, station: null, selected: null, token: 0 },
+      metro:     { map: null, markers: sharedMarkers, route: null, station: null, selected: null, token: 0 }
+    };
+    let sharedMap = null;
+    let userMarker = null;
+    let activeMapKey = 'parikrama';
+    let stationLayer = null;            // metro-station pins, only shown on the Metro tab
+    const stationMarkers = {};          // station core name -> marker
+    let stationQueueRunning = false;
+
+    function stationCore(metro) {
+      return metro.replace(/\s*\(.*?\)\s*/g, '').trim().replace(/\s+Metro$/i, '');
+    }
+
+    function ensureStationPin(core, pos) {
+      if (stationMarkers[core]) return stationMarkers[core];
+      const n = pandals.filter(p => stationCore(p.metro) === core).length;
+      const m = L.marker([pos.lat, pos.lng], { icon: pinIcon('metro') });
+      m.bindTooltip(core + ' Metro', { direction: 'top' });
+      m.bindPopup('<b>' + escapeHtml(core) + ' Metro</b><br>' + n + (n === 1 ? ' pandal' : ' pandals') + ' nearby on this list' +
+        '<br><a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(core + ' Metro, Kolkata') +
+        '" target="_blank" rel="noopener">Open in Maps ↗</a>', { maxWidth: 230 });
+      stationMarkers[core] = m;
+      if (stationLayer) stationLayer.addLayer(m);
+      return m;
+    }
+
+    // Adds a train pin for every station. Positions are looked up once (Nominatim allows ~1 request/second)
+    // and then cached in the browser, so this is instant on later visits.
+    async function loadStationPins() {
+      if (stationQueueRunning) return;
+      stationQueueRunning = true;
+      try {
+        const cores = Array.from(new Set(pandals.map(p => stationCore(p.metro))));
+        for (const core of cores) {
+          if (stationMarkers[core]) continue;
+          const cached = !!geoCache[core];
+          try {
+            const pos = await geocodeStation(core);
+            if (pos) ensureStationPin(core, pos);
+          } catch (e) { console.warn('Station lookup failed:', core, e); }
+          if (!cached) await new Promise(r => setTimeout(r, 1100));
+        }
+      } finally {
+        stationQueueRunning = false;
       }
     }
+
+    // keep the focus area clear of the header (top) and the list panel (bottom)
+    function mapPad() {
+      const panel = document.querySelector('.view-panel.active .pandal-list-panel');
+      const bottom = Math.min((panel ? panel.offsetHeight : 0) + 60, window.innerHeight * 0.55);
+      const top = Math.min(140, window.innerHeight * 0.25);
+      return { paddingTopLeft: [16, top], paddingBottomRight: [16, bottom] };
+    }
+
+    function focusPoint(S, p) {
+      S.map.fitBounds([[p.lat, p.lng]], Object.assign({ maxZoom: 16 }, mapPad()));
+    }
+
+    function fitAll(key) {
+      const S = MAPS[key];
+      if (!S.map) return;
+      const pts = pandals.map(p => [p.lat, p.lng]);
+      // only include the user if they're actually near Kolkata, otherwise the map zooms out to the world
+      if (userPos &&
+          getDistanceFromLatLonInKm(userPos.lat, userPos.lng, KOLKATA_CENTER[0], KOLKATA_CENTER[1]) < 60) {
+        pts.push([userPos.lat, userPos.lng]);
+      }
+      S.map.fitBounds(pts, Object.assign({ maxZoom: 14 }, mapPad()));
+    }
+
+    function updateUserMarker() {
+      if (!sharedMap || !userPos) return;
+      if (userMarker) {
+        userMarker.setLatLng([userPos.lat, userPos.lng]);
+      } else {
+        userMarker = L.circleMarker([userPos.lat, userPos.lng], {
+          radius: 7, color: '#fff', weight: 3, fillColor: '#2f80ed', fillOpacity: 1
+        }).addTo(sharedMap).bindTooltip('You are here');
+      }
+    }
+
+    function ensureMap(key) {
+      activeMapKey = key;
+      if (typeof L === 'undefined') return;   // Leaflet failed to load
+
+      if (!sharedMap) {
+        sharedMap = L.map('bgMap', { zoomControl: false, attributionControl: false });
+        L.control.zoom({ position: 'topright' }).addTo(sharedMap);
+        L.control.attribution({ position: 'topleft', prefix: false }).addTo(sharedMap);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+        }).addTo(sharedMap);
+        sharedMap.setView(KOLKATA_CENTER, 12);
+        MAPS.parikrama.map = sharedMap;
+        MAPS.metro.map = sharedMap;
+        stationLayer = L.layerGroup();
+
+        pandals.forEach(p => {
+          const m = L.marker([p.lat, p.lng], { icon: pinIcon('pujo') }).addTo(sharedMap);
+          m.bindTooltip(p.name, { direction: 'top' });
+          m.on('click', () => selectPandal(activeMapKey, p.id, true));
+          sharedMarkers[p.id] = m;
+        });
+        updateUserMarker();
+      }
+
+      // metro-station pins only belong on the Metro tab
+      if (key === 'metro') {
+        if (!sharedMap.hasLayer(stationLayer)) stationLayer.addTo(sharedMap);
+        loadStationPins();
+      } else if (sharedMap.hasLayer(stationLayer)) {
+        sharedMap.removeLayer(stationLayer);
+      }
+
+      // The map was hidden until now, so re-measure it, then show this tab's own state
+      setTimeout(() => {
+        sharedMap.invalidateSize();
+        sharedMap.closePopup();
+        clearOverlays(MAPS.parikrama);
+        clearOverlays(MAPS.metro);
+        const S = MAPS[key];
+        if (S.selected !== null) {
+          selectPandal(key, S.selected, false);
+        } else {
+          styleMarkers(S, -1);
+          fitAll(key);
+        }
+      }, 60);
+    }
+
+    function clearOverlays(S) {
+      if (S.route) { S.map.removeLayer(S.route); S.route = null; }
+      if (S.station) { setPinSelected(S.station, false); S.station = null; }
+    }
+
+    function styleMarkers(S, id) {
+      Object.keys(S.markers).forEach(k => setPinSelected(S.markers[k], Number(k) === id));
+    }
+
+    function highlightCard(key, id, scroll) {
+      const cont = document.getElementById(key === 'metro' ? 'metroContainer' : 'pandalContainer');
+      cont.querySelectorAll('.pandal-card.selected').forEach(c => c.classList.remove('selected'));
+      const card = cont.querySelector('.pandal-card[data-id="' + id + '"]');
+      if (card) {
+        card.classList.add('selected');
+        if (scroll) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+
+    function drawRoute(S, geometry, color, dashed) {
+      const casing = L.geoJSON(geometry, { style: { color: '#fff', weight: 8, opacity: 0.9 } });
+      const line = L.geoJSON(geometry, { style: { color: color, weight: 5, opacity: 0.95, dashArray: dashed ? '2 9' : null, lineCap: 'round' } });
+      S.route = L.featureGroup([casing, line]).addTo(S.map);
+      return S.route.getBounds();
+    }
+
+    async function selectPandal(key, id, fromMap) {
+      const S = MAPS[key];
+      const p = pandals[id];
+      S.selected = id;
+      const token = ++S.token;
+      highlightCard(key, id, fromMap);
+      if (!S.map) return;
+      clearOverlays(S);
+      styleMarkers(S, id);
+      if (key === 'parikrama') await showDrivingRoute(S, p, token);
+      else await showMetroWalk(S, p, token);
+    }
+
+    // Pandals tab: road route from the user to the pandal
+    async function showDrivingRoute(S, p, token) {
+      const m = S.markers[p.id];
+      const dir = 'https://www.google.com/maps/dir/?api=1' +
+        (userPos ? '&origin=' + userPos.lat + ',' + userPos.lng : '') +
+        '&destination=' + p.lat + ',' + p.lng + '&travelmode=driving';
+      const html = (extra) => '<b>' + escapeHtml(p.name) + '</b><br>' + escapeHtml(p.location) + extra +
+        '<br><a href="' + dir + '" target="_blank" rel="noopener">Directions ↗</a>';
+
+      if (!userPos) {
+        m.bindPopup(html('<br><i>Allow location to see the road route</i>'), { maxWidth: 220 }).openPopup();
+        focusPoint(S, p);
+        return;
+      }
+
+      m.bindPopup(html('<br><i>Finding route…</i>'), { maxWidth: 220 }).openPopup();
+      try {
+        const d = await fetchJson('https://router.project-osrm.org/route/v1/driving/' +
+          userPos.lng + ',' + userPos.lat + ';' + p.lng + ',' + p.lat + '?overview=full&geometries=geojson');
+        if (token !== S.token) return;
+        const r = d.routes && d.routes[0];
+        if (!r) throw new Error('no route');
+        const bounds = drawRoute(S, r.geometry, '#A91D22', false);
+        S.map.fitBounds(bounds, Object.assign({ maxZoom: 17 }, mapPad()));
+        m.setPopupContent(html('<br>' + formatDist(r.distance / 1000) + ' by road'));
+      } catch (err) {
+        if (token !== S.token) return;
+        console.warn('Route failed:', err);
+        m.setPopupContent(html('<br>Couldn’t draw the route'));
+        focusPoint(S, p);
+      }
+    }
+
+    // Metro tab: walking route from the nearest metro station to the pandal
+    const GEO_KEY = 'sharadiya_metro_geo_v1';
+    let geoCache = {};
+    try { geoCache = JSON.parse(localStorage.getItem(GEO_KEY) || '{}'); } catch (e) {}
+
+    const geoInflight = {};
+    function geocodeStation(core) {
+      if (geoCache[core]) return Promise.resolve(geoCache[core]);
+      if (!geoInflight[core]) {
+        geoInflight[core] = geocodeStationRaw(core).finally(() => { delete geoInflight[core]; });
+      }
+      return geoInflight[core];
+    }
+
+    async function geocodeStationRaw(core) {
+      if (geoCache[core]) return geoCache[core];
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6' +
+        '&viewbox=88.20,22.75,88.55,22.35&bounded=1&q=' + encodeURIComponent(core + ' metro station');
+      const res = await fetchJson(url);
+      const hit = (res || []).find(r => r.category === 'railway' || r.category === 'public_transport');
+      if (!hit) return null;
+      const pos = { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) };
+      geoCache[core] = pos;
+      try { localStorage.setItem(GEO_KEY, JSON.stringify(geoCache)); } catch (e) {}
+      return pos;
+    }
+
+    async function showMetroWalk(S, p, token) {
+      const m = S.markers[p.id];
+      const stationName = p.metro.replace(/\s*\(.*?\)\s*/g, '').trim();   // drops the "(Orange Line…)" note
+      const core = stationName.replace(/\s+Metro$/i, '');
+      const dir = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(stationName + ', Kolkata') +
+        '&destination=' + p.lat + ',' + p.lng + '&travelmode=walking';
+      const base = '<b>' + escapeHtml(p.name) + '</b><br>Nearest metro: ' + escapeHtml(p.metro);
+      const link = '<br><a href="' + dir + '" target="_blank" rel="noopener">Walking directions ↗</a>';
+
+      m.bindPopup(base + '<br><i>Finding walking route…</i>', { maxWidth: 230 }).openPopup();
+      focusPoint(S, p);
+
+      try {
+        const st = await geocodeStation(core);
+        if (token !== S.token) return;
+        if (!st) throw new Error('station not found');
+
+        const sm = ensureStationPin(core, st);
+        setPinSelected(sm, true);
+        S.station = sm;
+
+        const d = await fetchJson('https://routing.openstreetmap.de/routed-foot/route/v1/foot/' +
+          st.lng + ',' + st.lat + ';' + p.lng + ',' + p.lat + '?overview=full&geometries=geojson');
+        if (token !== S.token) return;
+        const r = d.routes && d.routes[0];
+        if (!r) throw new Error('no walking route');
+
+        const bounds = drawRoute(S, r.geometry, '#2f80ed', true);
+        S.map.fitBounds(bounds, Object.assign({ maxZoom: 17 }, mapPad()));
+
+        const km = r.distance / 1000;
+        const mins = Math.max(1, Math.round(r.duration / 60));
+        walkInfo[p.id] = { km: km, mins: mins };
+        m.setPopupContent(base + '<br>' + formatDist(km) + ' walk from the station (~' + mins + ' min)' + link);
+
+        const line = document.querySelector('#metroContainer .pandal-card[data-id="' + p.id + '"] p');
+        if (line && !line.querySelector('.walk-info')) line.insertAdjacentHTML('beforeend', walkHtml(p.id));
+      } catch (err) {
+        if (token !== S.token) return;
+        console.warn('Metro walk failed:', err);
+        m.setPopupContent(base + '<br>Couldn’t draw the walking route.' + link);
+      }
+    }
+
+    function walkHtml(id) {
+      const w = walkInfo[id];
+      return w ? '<span class="walk-info"><br><span style="color:var(--accent-gold); font-weight:600;">' +
+        formatDist(w.km) + ' walk · ~' + w.mins + ' min</span></span>' : '';
+    }
+
 
     // ---- Search helpers (Pandals + Metro tabs) ----
     let currentPandalList = pandals; // last list shown (keeps the nearest-first order after location loads)
@@ -951,12 +1419,16 @@
       currentPandalList = list;
       const query = document.getElementById('pandalSearch').value;
       const shown = filterPandals(list, query);
+      const selId = MAPS.parikrama.selected;
       document.getElementById('pandalContainer').innerHTML = shown.length ? shown.map(p => {
-        let distText = p.distance ? `<br><span style="color:#D4AF37; font-weight:600;">${p.distance.toFixed(1)} km away</span>` : "";
+        let distText = '';
+        if (typeof p.distance === 'number') {
+          distText = `<br><span style="color:var(--accent-gold); font-weight:600;">${formatDist(p.distance)} ${p.isRoad ? 'by road' : 'straight-line'}</span>`;
+        }
         return `
-        <div class="pandal-card">
+        <div class="pandal-card selectable${p.id === selId ? ' selected' : ''}" data-id="${p.id}" onclick="selectPandal('parikrama', ${p.id})">
           <div><h4>${p.name}</h4><p>${p.location} ${distText}</p></div>
-          <a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank" class="route-btn">Map</a>
+          <a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank" rel="noopener" class="route-btn" onclick="event.stopPropagation()">Map</a>
         </div>`;
       }).join('') : emptyResultHtml(query);
     }
@@ -964,15 +1436,16 @@
     function renderMetroList() {
       const query = document.getElementById('metroSearch').value;
       const shown = filterPandals(pandals, query);
+      const selId = MAPS.metro.selected;
       document.getElementById('metroContainer').innerHTML = shown.length ? shown.map(p => {
         const metroQuery = encodeURIComponent(p.metro + ', Kolkata');
         return `
-        <div class="pandal-card">
+        <div class="pandal-card selectable${p.id === selId ? ' selected' : ''}" data-id="${p.id}" onclick="selectPandal('metro', ${p.id})">
           <div>
              <h4 style="margin-bottom: 4px;">${p.name}</h4>
-             <p><span style="color:var(--accent-gold); font-weight:600;">Nearest Metro:</span> ${p.metro}</p>
+             <p><span style="color:var(--accent-gold); font-weight:600;">Nearest Metro:</span> ${p.metro}${walkHtml(p.id)}</p>
           </div>
-          <a href="https://maps.google.com/?q=${metroQuery}" target="_blank" class="route-btn">Map</a>
+          <a href="https://maps.google.com/?q=${metroQuery}" target="_blank" rel="noopener" class="route-btn" onclick="event.stopPropagation()">Map</a>
         </div>`;
       }).join('') : emptyResultHtml(query);
     }
