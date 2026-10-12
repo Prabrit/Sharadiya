@@ -504,7 +504,7 @@
         
         <div id="metroView" class="view-panel">
             <div class="pandal-list-panel">
-              <div style="font-size:0.8rem; margin-bottom:10px; color:var(--text-muted);">Nearest Metro Stations for Pandals · tap one to see the walk from the station</div>
+              <div id="metroStatus" style="font-size:0.8rem; margin-bottom:10px; color:var(--text-muted);">Nearest Metro Stations for Pandals · tap one to see the walk from the station</div>
               <div class="search-wrap">
               <div class="search-box">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -1081,17 +1081,26 @@
     }
 
     function setPinSelected(mk, on) {
-      const el = mk && mk.getElement && mk.getElement();
+      if (!mk) return;
+      if (mk.setStyle) {                       // circle dot (pandals on the Metro tab)
+        mk.setStyle(on ? { fillColor: '#D4AF37', radius: 9 } : { fillColor: '#A91D22', radius: 5 });
+        if (on) mk.bringToFront();
+        return;
+      }
+      const el = mk.getElement && mk.getElement();
       if (el) el.classList.toggle('selected', on);
-      if (mk) mk.setZIndexOffset(on ? 1000 : 0);
+      mk.setZIndexOffset(on ? 1000 : 0);
     }
 
     // ---- Maps: one full-screen map behind the UI, shared by the Pandals and Metro tabs ----
-    const sharedMarkers = {};
+    const sharedMarkers = {};   // Pandals tab: trishul pins
+    const dotMarkers = {};      // Metro tab: small dots for the pandals (the train pins are the stations)
     const MAPS = {
       parikrama: { map: null, markers: sharedMarkers, route: null, station: null, selected: null, token: 0 },
-      metro:     { map: null, markers: sharedMarkers, route: null, station: null, selected: null, token: 0 }
+      metro:     { map: null, markers: dotMarkers,    route: null, station: null, selected: null, token: 0 }
     };
+    let pujoLayer = null;
+    let dotLayer = null;
     let sharedMap = null;
     let userMarker = null;
     let activeMapKey = 'parikrama';
@@ -1121,16 +1130,27 @@
     async function loadStationPins() {
       if (stationQueueRunning) return;
       stationQueueRunning = true;
+      const status = document.getElementById('metroStatus');
+      const BASE = 'Nearest Metro Stations for Pandals \u00b7 tap a pandal to see the walk from its station';
       try {
         const cores = Array.from(new Set(pandals.map(p => stationCore(p.metro))));
+        let done = 0;
         for (const core of cores) {
-          if (stationMarkers[core]) continue;
-          const cached = !!geoCache[core];
-          try {
-            const pos = await geocodeStation(core);
-            if (pos) ensureStationPin(core, pos);
-          } catch (e) { console.warn('Station lookup failed:', core, e); }
-          if (!cached) await new Promise(r => setTimeout(r, 1100));
+          if (!stationMarkers[core]) {
+            const cached = !!geoCache[core];
+            if (status && !cached) status.textContent = 'Placing metro stations on the map\u2026 ' + done + '/' + cores.length;
+            try {
+              const pos = await geocodeStation(core);
+              if (pos) ensureStationPin(core, pos);
+            } catch (e) { console.warn('Station lookup failed:', core, e); }
+            if (!cached) await new Promise(r => setTimeout(r, 1100));
+          }
+          done++;
+        }
+        if (status) {
+          status.textContent = Object.keys(stationMarkers).length
+            ? BASE
+            : 'Couldn\u2019t place the metro stations right now \u2014 tap a pandal to try its walking route';
         }
       } finally {
         stationQueueRunning = false;
@@ -1189,21 +1209,34 @@
         MAPS.metro.map = sharedMap;
         stationLayer = L.layerGroup();
 
+        pujoLayer = L.layerGroup().addTo(sharedMap);
+        dotLayer = L.layerGroup();
         pandals.forEach(p => {
-          const m = L.marker([p.lat, p.lng], { icon: pinIcon('pujo') }).addTo(sharedMap);
+          const m = L.marker([p.lat, p.lng], { icon: pinIcon('pujo') });
           m.bindTooltip(p.name, { direction: 'top' });
           m.on('click', () => selectPandal(activeMapKey, p.id, true));
+          pujoLayer.addLayer(m);
           sharedMarkers[p.id] = m;
+
+          const d = L.circleMarker([p.lat, p.lng], { radius: 5, color: '#fff', weight: 2, fillColor: '#A91D22', fillOpacity: 1 });
+          d.bindTooltip(p.name, { direction: 'top' });
+          d.on('click', () => selectPandal(activeMapKey, p.id, true));
+          dotLayer.addLayer(d);
+          dotMarkers[p.id] = d;
         });
         updateUserMarker();
       }
 
       // metro-station pins only belong on the Metro tab
       if (key === 'metro') {
+        if (sharedMap.hasLayer(pujoLayer)) sharedMap.removeLayer(pujoLayer);
+        if (!sharedMap.hasLayer(dotLayer)) dotLayer.addTo(sharedMap);
         if (!sharedMap.hasLayer(stationLayer)) stationLayer.addTo(sharedMap);
         loadStationPins();
-      } else if (sharedMap.hasLayer(stationLayer)) {
-        sharedMap.removeLayer(stationLayer);
+      } else {
+        if (sharedMap.hasLayer(stationLayer)) sharedMap.removeLayer(stationLayer);
+        if (sharedMap.hasLayer(dotLayer)) sharedMap.removeLayer(dotLayer);
+        if (!sharedMap.hasLayer(pujoLayer)) pujoLayer.addTo(sharedMap);
       }
 
       // The map was hidden until now, so re-measure it, then show this tab's own state
