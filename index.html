@@ -419,6 +419,49 @@
 
     .leaflet-popup-content { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.8rem; line-height: 1.45; margin: 10px 14px; }
     .leaflet-popup-content a { color: var(--primary-crimson); font-weight: 600; }
+    /* ===== Trip planner ===== */
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .chip {
+      background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: #fff;
+      border-radius: 16px; padding: 6px 11px; font-family: inherit; font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; transition: background .2s ease;
+    }
+    .chip:hover { background: rgba(255,255,255,0.18); }
+    .chip.on { background: var(--primary-crimson); border-color: var(--primary-crimson); }
+    .chip:disabled { opacity: 0.45; cursor: default; }
+    .trip-stop { gap: 0; }
+    .trip-badge {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; margin-right: 10px;
+      background: var(--primary-crimson); color: #fff; border: 2px solid #D4AF37;
+      font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    }
+    .trip-body { flex: 1; min-width: 0; }
+    .trip-ctl { display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px; }
+    .icon-btn {
+      width: 28px; height: 28px; border-radius: 8px; border: none; cursor: pointer;
+      background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.22); }
+    .trip-leg { font-size: 0.74rem; color: var(--text-muted); margin: -2px 0 8px 36px; }
+    .trip-leg a { color: var(--accent-gold); text-decoration: none; font-weight: 600; }
+    .trip-empty { text-align: center; padding: 16px 8px; font-size: 0.82rem; color: var(--text-muted); }
+    body.map-mode #tripView .pandal-list-panel { max-height: min(380px, 46vh); }
+
+    .trip-num-wrap { background: none; border: none; }
+    .trip-num {
+      width: 30px; height: 30px; border-radius: 50%; background: #A91D22; color: #fff; border: 3px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;
+      font: 700 13px 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 90px; z-index: 30; pointer-events: none;
+      transform: translateX(-50%) translateY(10px); opacity: 0;
+      background: rgba(32, 14, 16, 0.92); color: #fff; border: 1px solid var(--glass-border);
+      padding: 8px 14px; border-radius: 18px; font-size: 0.8rem; font-weight: 600;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
@@ -457,6 +500,7 @@
         <button class="switch-btn active" onclick="switchMode('player', this, event)">Music</button>
         <button class="switch-btn" onclick="switchMode('parikrama', this, event)">Pandals</button>
         <button class="switch-btn" onclick="switchMode('metro', this, event)">Metro</button>
+        <button class="switch-btn" onclick="switchMode('trip', this, event)">Trip</button>
       </div>
       <div class="countdown-bar" id="pujoCountdown"></div>
     </div>
@@ -513,6 +557,31 @@
               </div>
             </div>
             <div id="metroContainer"></div>
+            </div>
+        </div>
+
+        <div id="tripView" class="view-panel">
+            <div class="pandal-list-panel">
+              <div id="tripSummary" style="font-size:0.8rem; margin-bottom:10px; color:var(--text-muted);"></div>
+              <div class="chip-row">
+                <button type="button" class="chip" id="tripTabPlan" onclick="setTripSub('plan')">My trip (0)</button>
+                <button type="button" class="chip" id="tripTabAdd" onclick="setTripSub('add')">+ Add pandals</button>
+              </div>
+
+              <div id="tripPlanBox">
+                <div class="chip-row" id="tripActions"></div>
+                <div id="tripStops"></div>
+              </div>
+
+              <div id="tripAddBox">
+                <div class="search-wrap">
+                  <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <input type="search" id="tripSearch" class="search-input" placeholder="Search pandal, area or metro…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search pandals to add" oninput="renderTripAdd()">
+                  </div>
+                </div>
+                <div id="tripAddList"></div>
+              </div>
             </div>
         </div>
 
@@ -864,7 +933,7 @@
       document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
-      document.body.classList.toggle('map-mode', mode === 'parikrama' || mode === 'metro');
+      document.body.classList.toggle('map-mode', mode === 'parikrama' || mode === 'metro' || mode === 'trip');
       updateBackground();
 
       if(mode === 'player') {
@@ -877,6 +946,10 @@
         document.getElementById('metroView').classList.add('active');
         ensureMap('metro');
         renderMetroList();
+      } else if (mode === 'trip') {
+        document.getElementById('tripView').classList.add('active');
+        ensureMap('trip');
+        renderTrip();
       } else if (mode === 'mahalaya') {
         document.getElementById('mahalayaView').classList.add('active');
         highlightActiveMahalayaItem();
@@ -928,7 +1001,285 @@
   { name: "Salt Lake CE Block", location: "Sector 1, Salt Lake", lat: 22.5943, lng: 88.4129, metro: "Central Park Metro" },
   { name: "Behala Nutan Dal", location: "Behala", lat: 22.5002, lng: 88.3203, metro: "Behala Bazar Metro" },
   { name: "Barisha Sarbojonin", location: "Paschim Barisha", lat: 22.4799, lng: 88.3081, metro: "Sakherbazar Metro" },
-  { name: "Behala Club", location: "Behala", lat: 22.5053, lng: 88.3141, metro: "Behala Bazar Metro" }
+  { name: "Behala Club", location: "Behala", lat: 22.5053, lng: 88.3141, metro: "Behala Bazar Metro" },
+
+  // ---- Added from thepujo.com/directory · North Kolkata ----
+  { name: "37 Pally", location: "near College Street", lat: 22.574528, lng: 88.368446, metro: "MG Road Metro" },
+  { name: "Ahiritola Jubak Brindo", location: "Ahiritola", lat: 22.5945, lng: 88.3595, metro: "Shovabazar Sutanuti Metro" },
+  { name: "Anupama Housing Complex", location: "VIP Road (Anupama)", lat: 22.629421, lng: 88.431786, metro: "Jessore Road Metro (Yellow Line)" },
+  { name: "Azad Hind Bag (Hedua Park)", location: "Hedua / Goabagan", lat: 22.5925, lng: 88.3715, metro: "Girish Park Metro", approx: true },
+  { name: "Baghbazar 7 Pally Sarbojanin", location: "Bagbazar", lat: 22.6046937, lng: 88.3713085, metro: "Shyambazar Metro" },
+  { name: "Baghbazar Jagaddhatri", location: "Bagbazar", lat: 22.603493, lng: 88.371101, metro: "Shyambazar Metro" },
+  { name: "Baghbazar Pally", location: "Bagbazar", lat: 22.603, lng: 88.367, metro: "Shyambazar Metro", approx: true },
+  { name: "Bangur Avenue Protirodh Bahini", location: "Bangur Avenue", lat: 22.606899, lng: 88.409248, metro: "Dum Dum Metro" },
+  { name: "Beadon Street Sarbojanin", location: "Beadon Street", lat: 22.5868, lng: 88.3695, metro: "Girish Park Metro", approx: true },
+  { name: "Belgachia Kendriya Sarbojanin", location: "Belgachia", lat: 22.6075, lng: 88.382, metro: "Belgachia Metro", approx: true },
+  { name: "Belgachia Sadharan Durgotsab", location: "Belgachia", lat: 22.609217, lng: 88.383423, metro: "Belgachia Metro" },
+  { name: "Beliaghata 33 Pally", location: "Beliaghata", lat: 22.566563, lng: 88.393852, metro: "Phoolbagan Metro" },
+  { name: "Beliaghata Nabamilan", location: "Beliaghata", lat: 22.5655, lng: 88.391, metro: "Phoolbagan Metro", approx: true },
+  { name: "Brindaban Matri Mandir", location: "near Amherst Street", lat: 22.5825241, lng: 88.3732045, metro: "Girish Park Metro" },
+  { name: "Chorebagan Sarbojanin", location: "Chorebagan", lat: 22.58343, lng: 88.36307, metro: "MG Road Metro" },
+  { name: "CIT Sarbojanin", location: "near Tala", lat: 22.625994, lng: 88.377861, metro: "Dum Dum Metro" },
+  { name: "Dakshineswar Dolpere Adi Sarbojanin", location: "Dakshineswar", lat: 22.659449, lng: 88.364433, metro: "Dakshineswar Metro" },
+  { name: "Darpanarayan Tagore Street Sarbojanin", location: "Pathuriaghata", lat: 22.587505, lng: 88.354111, metro: "Girish Park Metro" },
+  { name: "Deshbandhu Ladies Park", location: "Deshbandhu Park, Shyambazar", lat: 22.6, lng: 88.3715, metro: "Shyambazar Metro", approx: true },
+  { name: "Dum Dum Park Sarbojanin", location: "Dum Dum Park", lat: 22.6094363, lng: 88.4164052, metro: "Central Park Metro" },
+  { name: "Dum Dum Park Yubak Brinda", location: "Dum Dum Park", lat: 22.605478, lng: 88.417732, metro: "Central Park Metro" },
+  { name: "Dum Dum Tarun Dal", location: "Dum Dum Park", lat: 22.611732, lng: 88.418739, metro: "Dum Dum Metro" },
+  { name: "Friends Union Club", location: "Shyambazar", lat: 22.6005, lng: 88.3705, metro: "Shyambazar Metro", approx: true },
+  { name: "Goabagan Sarbojanin", location: "Hedua / Goabagan", lat: 22.59124, lng: 88.372864, metro: "Girish Park Metro" },
+  { name: "Gouriberia (Gouribari) Sarbojanin", location: "Gouribari", lat: 22.594547, lng: 88.379227, metro: "Shyambazar Metro" },
+  { name: "Hari Ghosh Street Sarbojanin", location: "Hari Ghosh Street, Shyampukur", lat: 22.597, lng: 88.365, metro: "Shovabazar Sutanuti Metro", approx: true },
+  { name: "Haritaki Bagan Sarbojanin", location: "Hatibagan", lat: 22.584158, lng: 88.373466, metro: "Girish Park Metro" },
+  { name: "Hatibagan Nabin Pally", location: "Hatibagan", lat: 22.5937, lng: 88.3741, metro: "Shyambazar Metro" },
+  { name: "Hatkhola Gosain Para", location: "Hatkhola", lat: 22.597885, lng: 88.360771, metro: "Shovabazar Sutanuti Metro" },
+  { name: "Jagat Mukherjee Park", location: "Shyambazar", lat: 22.5993, lng: 88.369, metro: "Shyambazar Metro" },
+  { name: "Jawpur Bayam Samiti", location: "near Dum Dum Park", lat: 22.610584, lng: 88.401138, metro: "Dum Dum Metro" },
+  { name: "Joramandir Sarbojanin", location: "near VIP Road (Anupama)", lat: 22.613289, lng: 88.429512, metro: "Jessore Road Metro (Yellow Line)" },
+  { name: "Jorasanko Sadharan Durgotsav", location: "Jorasanko", lat: 22.583, lng: 88.362, metro: "Girish Park Metro", approx: true },
+  { name: "Kabiraj Bagan", location: "near Hatibagan", lat: 22.593855, lng: 88.382729, metro: "Shyambazar Metro" },
+  { name: "Kumartuli (idol-making quarter)", location: "Kumartuli", lat: 22.598, lng: 88.361, metro: "Shovabazar Sutanuti Metro", approx: true },
+  { name: "Kumartuli Sarbojanin", location: "Kumartuli", lat: 22.5998, lng: 88.3612, metro: "Shovabazar Sutanuti Metro" },
+  { name: "Lake View Park Sarbojanin", location: "Bonhooghly, Baranagar", lat: 22.6345, lng: 88.374, metro: "Baranagar Metro", approx: true },
+  { name: "Laketown Netaji Sporting Club", location: "Lake Town", lat: 22.608088, lng: 88.39962, metro: "Dum Dum Metro" },
+  { name: "Laketown Nutan Palli Pradeep Sangha", location: "Lake Town", lat: 22.60372, lng: 88.397507, metro: "Belgachia Metro" },
+  { name: "Laketown Vivekananda Park", location: "Lake Town", lat: 22.610039, lng: 88.402565, metro: "Dum Dum Metro" },
+  { name: "Lalabagan Yubak Brinda - Nabankur Sangha", location: "Lalabagan", lat: 22.588247, lng: 88.377106, metro: "Shyambazar Metro" },
+  { name: "Milangarh Sarbojanin", location: "near Dakshineswar", lat: 22.651651, lng: 88.374054, metro: "Baranagar Metro" },
+  { name: "Mitali - Kankurgachi", location: "Kankurgachi", lat: 22.579, lng: 88.3935, metro: "Phoolbagan Metro", approx: true },
+  { name: "Motijheel Sarbojanin", location: "Motijheel, Dum Dum", lat: 22.62336, lng: 88.410759, metro: "Dum Dum Metro" },
+  { name: "Murari Pukur Bidhan Sangha", location: "Muraripukur, Ultadanga", lat: 22.592875, lng: 88.383232, metro: "Shyambazar Metro" },
+  { name: "Naba Baghbazar", location: "Bagbazar", lat: 22.605097, lng: 88.370171, metro: "Shyambazar Metro" },
+  { name: "Nalin Sarkar Street Sarbojanin", location: "Hatibagan", lat: 22.5958, lng: 88.3712, metro: "Shyambazar Metro" },
+  { name: "Nawpara Dadabhai Sangha", location: "Noapara, Baranagar", lat: 22.632, lng: 88.383, metro: "Noapara Metro", approx: true },
+  { name: "North Tridhara Sarbojanin", location: "Hatibagan", lat: 22.5955, lng: 88.3715, metro: "Shyambazar Metro", approx: true },
+  { name: "Pathuriaghata Pancher Pally", location: "Pathuriaghata", lat: 22.587, lng: 88.356, metro: "Girish Park Metro", approx: true },
+  { name: "Pragati Pally Adhibasi Brinda", location: "near Lake Town", lat: 22.609594, lng: 88.400665, metro: "Dum Dum Metro" },
+  { name: "Rammohan Sammilani", location: "near Amherst Street", lat: 22.581205, lng: 88.375031, metro: "Girish Park Metro" },
+  { name: "Sammilita Lalabagan Sarbojanin", location: "Lalabagan", lat: 22.587385, lng: 88.376923, metro: "Shyambazar Metro" },
+  { name: "Sammilita Malapara", location: "near Jorabagan", lat: 22.588, lng: 88.3585, metro: "Girish Park Metro" },
+  { name: "Sandhani (Beliaghata)", location: "Beliaghata", lat: 22.569, lng: 88.392, metro: "Phoolbagan Metro", approx: true },
+  { name: "Sangrami", location: "near Ultadanga", lat: 22.590536, lng: 88.395699, metro: "Bengal Chemical Metro" },
+  { name: "Satadal", location: "Sikdar Bagan", lat: 22.595173, lng: 88.367691, metro: "Shovabazar Sutanuti Metro" },
+  { name: "Shimla Vivekananda Sporting Club", location: "Simla / Bidhan Sarani", lat: 22.585, lng: 88.3668, metro: "Girish Park Metro", approx: true },
+  { name: "Shurir Bagan", location: "near Hedua / Goabagan", lat: 22.594559, lng: 88.387566, metro: "Shyambazar Metro" },
+  { name: "Shyampukur Adi Sarbojanin", location: "Shyampukur", lat: 22.596, lng: 88.364, metro: "Shovabazar Sutanuti Metro", approx: true },
+  { name: "Shyampukur Sanghatirtha", location: "Shyampukur", lat: 22.595, lng: 88.365, metro: "Shovabazar Sutanuti Metro", approx: true },
+  { name: "Sikdar Bagan Sadharan Durgotsab", location: "Sikdar Bagan", lat: 22.5966234, lng: 88.3723112, metro: "Shyambazar Metro" },
+  { name: "Sovabazar Beniatola Sarbojanin", location: "Beniatola, Sovabazar", lat: 22.5975, lng: 88.3625, metro: "Shovabazar Sutanuti Metro", approx: true },
+  { name: "Sovabazar Burtolla Sarbojanin", location: "Sovabazar", lat: 22.5955, lng: 88.3643, metro: "Shovabazar Sutanuti Metro", approx: true },
+  { name: "Sovabazar Sarbojanin", location: "Sovabazar", lat: 22.5955, lng: 88.3655, metro: "Shovabazar Sutanuti Metro", approx: true },
+  { name: "Swapnar Bagan", location: "Kankurgachi", lat: 22.579193, lng: 88.395462, metro: "Phoolbagan Metro" },
+  { name: "Tala Barowari", location: "Tala", lat: 22.6085, lng: 88.3755, metro: "Belgachia Metro" },
+  { name: "Tala Palli", location: "Tala", lat: 22.607, lng: 88.377, metro: "Belgachia Metro", approx: true },
+  { name: "Taltala Sarbojanin", location: "Taltala", lat: 22.561, lng: 88.359, metro: "Chandni Chowk Metro", approx: true },
+  { name: "Tarun Sporting Club", location: "near Manicktala / Amherst Street", lat: 22.586376, lng: 88.365311, metro: "Girish Park Metro" },
+  { name: "Ultadanga Pallysree", location: "Ultadanga", lat: 22.596, lng: 88.3865, metro: "Belgachia Metro", approx: true },
+  { name: "Ultadanga Yuba Brinda", location: "Ultadanga", lat: 22.595916, lng: 88.3823154, metro: "Shyambazar Metro" },
+  { name: "United Club", location: "Ultadanga", lat: 22.591042, lng: 88.391182, metro: "Bengal Chemical Metro" },
+
+  // ---- Added from thepujo.com/directory · South Kolkata ----
+  { name: "11 Pally Youth Association - Behala", location: "Behala", lat: 22.4985408, lng: 88.3214501, metro: "Behala Bazar Metro" },
+  { name: "19 Pally", location: "near Gariahat", lat: 22.512735, lng: 88.3675, metro: "Kalighat Metro" },
+  { name: "25 Pally (Khidirpur)", location: "Khidirpur", lat: 22.5415, lng: 88.3275, metro: "Majerhat Metro", approx: true },
+  { name: "41 Pally (Haridevpur)", location: "Haridevpur", lat: 22.48303, lng: 88.338509, metro: "Netaji Metro" },
+  { name: "64 Pally", location: "Lansdowne", lat: 22.526789, lng: 88.346512, metro: "Jatin Das Park Metro" },
+  { name: "68 Pally", location: "Harish Park, Bhowanipore", lat: 22.527443, lng: 88.346184, metro: "Jatin Das Park Metro" },
+  { name: "74 Pally", location: "near Khidirpur", lat: 22.5385, lng: 88.3262, metro: "Netaji Bhavan Metro" },
+  { name: "77 Palli", location: "near Selimpur", lat: 22.504271, lng: 88.367607, metro: "Rabindra Sarobar Metro" },
+  { name: "Abasar Sarbojanin", location: "near Bhowanipore", lat: 22.527561, lng: 88.3489, metro: "Netaji Bhavan Metro" },
+  { name: "Abasarika Club", location: "Jodhpur Park", lat: 22.508394, lng: 88.369278, metro: "Rabindra Sarobar Metro" },
+  { name: "Acharya Prafulla Sangha - Behala", location: "Behala", lat: 22.49065, lng: 88.313461, metro: "Behala Chowrasta Metro" },
+  { name: "Adi Ballygunge Sarbojanin", location: "Adi Ballygunge", lat: 22.529564, lng: 88.37265, metro: "Ritwik Ghatak Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Adi Lake Palli", location: "near Vivekananda Park, Rashbehari", lat: 22.514532, lng: 88.34938, metro: "Rabindra Sarobar Metro" },
+  { name: "Agradut Udaya Sangha", location: "Bhowanipore", lat: 22.53, lng: 88.346, metro: "Netaji Bhavan Metro", approx: true },
+  { name: "Aikya Sammilani", location: "near Behala", lat: 22.504429, lng: 88.318611, metro: "Behala Bazar Metro" },
+  { name: "Ajeya Sanghati", location: "Haridevpur", lat: 22.480553, lng: 88.337418, metro: "Netaji Metro" },
+  { name: "Alipore Sarbojanin", location: "Alipore", lat: 22.533, lng: 88.333, metro: "Majerhat Metro", approx: true },
+  { name: "Azadgarh Sarbojanin", location: "Azadgarh, Tollygunge", lat: 22.484604, lng: 88.356171, metro: "Mahanayak Uttam Kumar Metro" },
+  { name: "Babubagan Sarbojanin", location: "Dhakuria", lat: 22.507988, lng: 88.368515, metro: "Rabindra Sarobar Metro" },
+  { name: "Baishnabghata Patuli Upanagari", location: "Patuli / Baishnabghata", lat: 22.471201, lng: 88.380142, metro: "Kavi Nazrul Metro" },
+  { name: "Bakulbagan Sarbojanin", location: "Bhowanipore", lat: 22.5295, lng: 88.348, metro: "Jatin Das Park Metro" },
+  { name: "Ballygunge 21 Pally", location: "near Adi Ballygunge", lat: 22.529175, lng: 88.3688163, metro: "Kalighat Metro" },
+  { name: "Bandhab Sammilani", location: "near Gariahat", lat: 22.507818, lng: 88.367661, metro: "Kalighat Metro" },
+  { name: "Barisha Club", location: "Barisha", lat: 22.482, lng: 88.3125, metro: "Sakherbazar Metro" },
+  { name: "Barisha Janakalyan Sangha", location: "Barisha", lat: 22.485041, lng: 88.312744, metro: "Behala Chowrasta Metro" },
+  { name: "Barisha Netaji Sangha", location: "Barisha", lat: 22.48385, lng: 88.314629, metro: "Behala Chowrasta Metro" },
+  { name: "Barisha Player's Corner", location: "Barisha", lat: 22.486588, lng: 88.312614, metro: "Behala Chowrasta Metro" },
+  { name: "Barisha Sabuj Sathi Club", location: "Barisha", lat: 22.4825, lng: 88.312, metro: "Sakherbazar Metro", approx: true },
+  { name: "Barisha Tapoban", location: "Barisha", lat: 22.475655, lng: 88.310432, metro: "Sakherbazar Metro" },
+  { name: "Barisha Tarun Tirtha", location: "Barisha", lat: 22.476515, lng: 88.31823, metro: "Sakherbazar Metro" },
+  { name: "Barisha Yubak Brinda", location: "Barisha", lat: 22.484386, lng: 88.306541, metro: "Sakherbazar Metro" },
+  { name: "Behala 29 Palli", location: "Behala", lat: 22.507343, lng: 88.322426, metro: "Taratala Metro" },
+  { name: "Behala Adarsha Pally", location: "Behala", lat: 22.499989, lng: 88.327629, metro: "Behala Bazar Metro" },
+  { name: "Behala Arcadia Sarbojanin", location: "Behala", lat: 22.502, lng: 88.32, metro: "Behala Bazar Metro", approx: true },
+  { name: "Behala Buroshibtala Janakalyan Sangha", location: "Behala", lat: 22.502289, lng: 88.329735, metro: "Taratala Metro" },
+  { name: "Behala Friends", location: "Behala", lat: 22.501, lng: 88.325, metro: "Behala Bazar Metro", approx: true },
+  { name: "Behala Sree Sangha", location: "Behala", lat: 22.497669, lng: 88.320183, metro: "Behala Bazar Metro" },
+  { name: "Behala Youngmen's Association", location: "Behala", lat: 22.507067, lng: 88.325104, metro: "Taratala Metro" },
+  { name: "Bengal United Club", location: "Kalighat", lat: 22.512428, lng: 88.348518, metro: "Kalighat Metro" },
+  { name: "Bharat Mata", location: "Surya Nagar, Tollygunge", lat: 22.488014, lng: 88.36248, metro: "Mahanayak Uttam Kumar Metro" },
+  { name: "Bhowanipore 76 Pally", location: "Bhowanipore", lat: 22.529, lng: 88.3465, metro: "Netaji Bhavan Metro", approx: true },
+  { name: "Bhowanipur 75 Palli", location: "Bhowanipore", lat: 22.5305, lng: 88.3435, metro: "Netaji Bhavan Metro", approx: true },
+  { name: "Bhowanipur Swadhin Sangha", location: "Bhowanipore", lat: 22.529, lng: 88.345, metro: "Netaji Bhavan Metro", approx: true },
+  { name: "Bosepukur Talbagan", location: "Kasba", lat: 22.517492, lng: 88.38533, metro: "Hemanta Mukhopadhyay Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Chakraberia Sarbojanin", location: "Chakraberia, Bhowanipore", lat: 22.526, lng: 88.3435, metro: "Netaji Bhavan Metro", approx: true },
+  { name: "Chandranath Chatterjee Street", location: "Bhowanipore", lat: 22.52669, lng: 88.345848, metro: "Jatin Das Park Metro" },
+  { name: "Chetla Sarbasadharaner Club", location: "Chetla", lat: 22.517433, lng: 88.339928, metro: "Kalighat Metro" },
+  { name: "Dakshin Phalguni Club", location: "Garia", lat: 22.470131, lng: 88.379921, metro: "Kavi Nazrul Metro" },
+  { name: "Debdaru Fatak", location: "Behala", lat: 22.502714, lng: 88.317474, metro: "Behala Bazar Metro" },
+  { name: "Dilip Smriti Sangha", location: "Kalighat", lat: 22.517796, lng: 88.34494, metro: "Kalighat Metro" },
+  { name: "Durgabari", location: "Behala", lat: 22.499889, lng: 88.315765, metro: "Behala Bazar Metro" },
+  { name: "Ekush (21) Pally Sarbojanin Durgotsab", location: "near Ballygunge", lat: 22.529325, lng: 88.369217, metro: "Jatin Das Park Metro" },
+  { name: "Falguni Sangha", location: "near Gariahat", lat: 22.521793, lng: 88.365829, metro: "Kalighat Metro" },
+  { name: "Ganbani Sangha", location: "near Haridevpur", lat: 22.488768, lng: 88.327805, metro: "Behala Chowrasta Metro" },
+  { name: "Garia Pancha Durga", location: "near Garia", lat: 22.461643, lng: 88.378166, metro: "Kavi Nazrul Metro" },
+  { name: "Garia Sabuj Dal", location: "Garia", lat: 22.469654, lng: 88.381599, metro: "Kavi Nazrul Metro" },
+  { name: "Garia Sreerampur Kalyan Samity", location: "Garia", lat: 22.466888, lng: 88.38044, metro: "Kavi Nazrul Metro" },
+  { name: "Goal Math", location: "Harish Park, Bhowanipore", lat: 22.526709, lng: 88.349045, metro: "Jatin Das Park Metro" },
+  { name: "Golden Arrow Club", location: "Manoharpukur Road", lat: 22.516293, lng: 88.34758, metro: "Kalighat Metro" },
+  { name: "Golf Green Phase 1", location: "near Surya Nagar, Tollygunge", lat: 22.491, lng: 88.362, metro: "Mahanayak Uttam Kumar Metro" },
+  { name: "Golf Green Phase 2", location: "near Surya Nagar, Tollygunge", lat: 22.491, lng: 88.362, metro: "Mahanayak Uttam Kumar Metro" },
+  { name: "Green Avenue Sarbojanin", location: "near Santoshpur", lat: 22.494051, lng: 88.380264, metro: "Satyajit Ray Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Greenwood Nook", location: "near Santoshpur", lat: 22.50556, lng: 88.399902, metro: "Kavi Sukanta Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Haridevpur Adarsha Samiti", location: "Haridevpur", lat: 22.475842, lng: 88.336937, metro: "Netaji Metro" },
+  { name: "Harish Park Puja", location: "Harish Park, Bhowanipore", lat: 22.530655, lng: 88.343681, metro: "Jatin Das Park Metro" },
+  { name: "Hazra Park Durgotsab", location: "Hazra", lat: 22.5245, lng: 88.351, metro: "Jatin Das Park Metro" },
+  { name: "Hindustan Club", location: "Gariahat", lat: 22.52, lng: 88.3655, metro: "Kalighat Metro", approx: true },
+  { name: "Jatra Suru Sangha", location: "Garia", lat: 22.470646, lng: 88.37793, metro: "Kavi Nazrul Metro" },
+  { name: "Jodhpur Park 95 Pally", location: "Jodhpur Park", lat: 22.508, lng: 88.366, metro: "Rabindra Sarobar Metro" },
+  { name: "Jogajatri Club", location: "near New Alipore", lat: 22.501614, lng: 88.331284, metro: "Taratala Metro" },
+  { name: "Judge Bagan Recreation Club", location: "near Paschim Putiary", lat: 22.477327, lng: 88.338959, metro: "Netaji Metro" },
+  { name: "Kabitirtha", location: "Khidirpur", lat: 22.541048, lng: 88.323288, metro: "Majerhat Metro" },
+  { name: "Kalighat Natun Sangha", location: "Kalighat", lat: 22.5185, lng: 88.3425, metro: "Kalighat Metro", approx: true },
+  { name: "Kendua Shanti Sangha - Patuli", location: "Patuli / Baishnabghata", lat: 22.47193, lng: 88.380997, metro: "Kavi Nazrul Metro" },
+  { name: "Lake Pally Sarbojanin", location: "near Mudiali", lat: 22.507259, lng: 88.346237, metro: "Rabindra Sarobar Metro" },
+  { name: "Lake Youth Corner", location: "near Dhakuria / Lake Gardens", lat: 22.510754, lng: 88.347328, metro: "Rabindra Sarobar Metro" },
+  { name: "Maddox Square", location: "Ballygunge", lat: 22.525, lng: 88.357, metro: "Jatin Das Park Metro" },
+  { name: "Manoharpukur Youngs", location: "Manoharpukur Road", lat: 22.518682, lng: 88.356216, metro: "Kalighat Metro" },
+  { name: "Mukul Sangha", location: "near Behala", lat: 22.503359, lng: 88.313705, metro: "Behala Bazar Metro" },
+  { name: "Naskarpara Pally Unnayan Samity - Haridevpur", location: "Haridevpur", lat: 22.480223, lng: 88.339539, metro: "Netaji Metro" },
+  { name: "Naskarpur Sarbojanin", location: "near Behala", lat: 22.506571, lng: 88.312065, metro: "Taratala Metro" },
+  { name: "Nepal Bhattacharjee Street", location: "Nepal Bhattacharjee Street, Kalighat", lat: 22.5180222, lng: 88.3426217, metro: "Kalighat Metro" },
+  { name: "Netaji Jatiya Sebadal", location: "near Surya Nagar, Tollygunge", lat: 22.484991, lng: 88.358231, metro: "Masterda Surya Sen Metro" },
+  { name: "Netaji Nagar Sarbojanin", location: "Netaji Nagar", lat: 22.480721, lng: 88.357719, metro: "Masterda Surya Sen Metro" },
+  { name: "New Alipore Children's Park", location: "New Alipore", lat: 22.507145, lng: 88.337021, metro: "Rabindra Sarobar Metro" },
+  { name: "Padmapukur Baroyari", location: "Padmapukur, Bhowanipore", lat: 22.531862, lng: 88.354294, metro: "Jatin Das Park Metro" },
+  { name: "Padmapukur Youth Association", location: "Padmapukur, Bhowanipore", lat: 22.531614, lng: 88.352341, metro: "Jatin Das Park Metro" },
+  { name: "Pally Mangal Samity", location: "near Dhakuria / Lake Gardens", lat: 22.5035, lng: 88.362, metro: "Rabindra Sarobar Metro" },
+  { name: "Pally Saradiya Club", location: "near Khidirpur", lat: 22.543179, lng: 88.321709, metro: "Rabindra Sadan Metro" },
+  { name: "Pally Unnayan Samity Paschim Putiary", location: "Paschim Putiary", lat: 22.478121, lng: 88.342247, metro: "Netaji Metro" },
+  { name: "Park Circus Uddipani", location: "Park Circus", lat: 22.543, lng: 88.3705, metro: "Rabindra Sadan Metro", approx: true },
+  { name: "Poddar Nagar Park", location: "Poddar Nagar, Jadavpur", lat: 22.500887, lng: 88.364433, metro: "Rabindra Sarobar Metro" },
+  { name: "Prasanta Disha Sarbojanin", location: "near New Alipore", lat: 22.499216, lng: 88.327644, metro: "Behala Bazar Metro" },
+  { name: "Pratapaditya Road Trikon Park", location: "Pratapaditya Road, Kalighat", lat: 22.513498, lng: 88.344658, metro: "Kalighat Metro" },
+  { name: "Purbachal Shakti Sangha", location: "near Rajdanga, Kasba", lat: 22.505142, lng: 88.389214, metro: "Hemanta Mukhopadhyay Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Raipur Club", location: "Raipur, Garia side", lat: 22.4745148, lng: 88.3780502, metro: "Gitanjali Metro" },
+  { name: "Rajdanga Naba Uday Sangha", location: "Rajdanga", lat: 22.513, lng: 88.388, metro: "Hemanta Mukhopadhyay Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Rajdanga Tribarna Sangha", location: "Rajdanga, Kasba", lat: 22.515083, lng: 88.389534, metro: "Hemanta Mukhopadhyay Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Roynagar Unnayan Samity", location: "Bansdroni / Roynagar", lat: 22.47, lng: 88.362, metro: "Gitanjali Metro", approx: true },
+  { name: "Rupchand Mukherjee Lane Sarbojanin", location: "Bhowanipore", lat: 22.527273, lng: 88.344948, metro: "Jatin Das Park Metro" },
+  { name: "Sabeda Bagan", location: "near Behala", lat: 22.488293, lng: 88.316666, metro: "Behala Chowrasta Metro" },
+  { name: "Samaj Sebi Sangha", location: "Lake View Road", lat: 22.515591, lng: 88.357719, metro: "Rabindra Sarobar Metro" },
+  { name: "Sanghasree", location: "Kalighat", lat: 22.518, lng: 88.3415, metro: "Kalighat Metro", approx: true },
+  { name: "Santoshpur Agragami", location: "Santoshpur", lat: 22.494265, lng: 88.377991, metro: "Satyajit Ray Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Santoshpur Bibekananda Sangha", location: "Santoshpur", lat: 22.493908, lng: 88.383392, metro: "Satyajit Ray Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Santoshpur Lake Pally", location: "Santoshpur", lat: 22.491508, lng: 88.382774, metro: "Satyajit Ray Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Santoshpur Sonar Tori", location: "Santoshpur", lat: 22.49184, lng: 88.378548, metro: "Satyajit Ray Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Santoshpur Trikon Park", location: "Santoshpur", lat: 22.492996, lng: 88.378448, metro: "Satyajit Ray Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Sebak Sangha", location: "Kalighat", lat: 22.511377, lng: 88.347542, metro: "Kalighat Metro" },
+  { name: "Selimpur Naskarpara", location: "Selimpur, Dhakuria", lat: 22.504808, lng: 88.37606, metro: "Jyotirindra Nandi Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Selimpur Pally", location: "Selimpur", lat: 22.504, lng: 88.3712, metro: "Rabindra Sarobar Metro" },
+  { name: "Shib Mandir Sarbojanin", location: "Lake Terrace", lat: 22.5107, lng: 88.3525, metro: "Kalighat Metro" },
+  { name: "Shyamapally Shyama Sangha", location: "near Netaji Nagar", lat: 22.49152, lng: 88.37159, metro: "Masterda Surya Sen Metro" },
+  { name: "Sitalatala Kishore Sangha", location: "near Haridevpur", lat: 22.481987, lng: 88.322479, metro: "Behala Chowrasta Metro" },
+  { name: "Sodepur Pragati Sangha (Haridevpur)", location: "Haridevpur", lat: 22.481165, lng: 88.331619, metro: "Netaji Metro" },
+  { name: "Surya Nagar Sarbojanin", location: "Surya Nagar, Tollygunge", lat: 22.47489, lng: 88.359344, metro: "Masterda Surya Sen Metro" },
+  { name: "Thakurpukur SB Park Sarbojanin", location: "Thakurpukur", lat: 22.462, lng: 88.3035, metro: "Thakurpukur Metro", approx: true },
+  { name: "The Bengal Boys Training Association", location: "Chetla", lat: 22.517557, lng: 88.341179, metro: "Kalighat Metro" },
+  { name: "Triangular Park Sarbojanin", location: "Triangular Park, Rashbehari", lat: 22.516, lng: 88.349, metro: "Kalighat Metro", approx: true },
+  { name: "Uttar Panchanan Gram Milan", location: "near Anandapur", lat: 22.532141, lng: 88.396339, metro: "Ritwik Ghatak Metro (Orange Line, weekdays 8am-8pm only)" },
+  { name: "Vivekananda Park Athletic Club", location: "near Haridevpur", lat: 22.481016, lng: 88.336967, metro: "Netaji Metro" },
+  { name: "Vivekananda Sporting Club", location: "near Paschim Putiary", lat: 22.476332, lng: 88.338493, metro: "Netaji Metro" },
+  { name: "Yuba Sangha Club", location: "near Netaji Nagar", lat: 22.485378, lng: 88.36499, metro: "Masterda Surya Sen Metro" },
+
+  // ---- Added from thepujo.com/directory · Bonedi barir pujo ----
+  { name: "Andul Rajbari (Bonedi Bari)", location: "Andul, Howrah · Bonedi bari", lat: 22.58, lng: 88.237, metro: "Howrah Maidan Metro" },
+  { name: "Badan Chandra Roy Barir Durga Pujo", location: "Colootola · Bonedi bari", lat: 22.569, lng: 88.359, metro: "Central Metro", approx: true },
+  { name: "Baghbazar Haldar Barir Pujo", location: "Bagbazar · Bonedi bari", lat: 22.6035, lng: 88.3655, metro: "Shyambazar Metro", approx: true },
+  { name: "Bhukailash Rajbari", location: "Khidirpur · Bonedi bari", lat: 22.538, lng: 88.3245, metro: "Majerhat Metro", approx: true },
+  { name: "Chandra Barir Durga Pujo", location: "Jhamapukur · Bonedi bari", lat: 22.577, lng: 88.362, metro: "MG Road Metro", approx: true },
+  { name: "Darjipara Mitra Barir Durga Pujo", location: "Darjipara · Bonedi bari", lat: 22.5835, lng: 88.365, metro: "Girish Park Metro", approx: true },
+  { name: "Durga Puja of 4 Ghosh Lane", location: "Manicktala / Amherst Street · Bonedi bari", lat: 22.585108, lng: 88.370789, metro: "Girish Park Metro" },
+  { name: "Hathkhola Dutta Barir Durga Pujo", location: "Hatkhola · Bonedi bari", lat: 22.5928457, lng: 88.3549315, metro: "Girish Park Metro" },
+  { name: "Khelat Ghosh Barir Durga Pujo", location: "Pathuriaghata · Bonedi bari", lat: 22.586, lng: 88.36, metro: "Girish Park Metro", approx: true },
+  { name: "Mallick Barir Durga Pujo (Bhowanipore)", location: "Bhowanipore · Bonedi bari", lat: 22.5285, lng: 88.347, metro: "Netaji Bhavan Metro", approx: true },
+  { name: "Purna Chandra Dhar Barir Durga Pujo", location: "Colootola · Bonedi bari", lat: 22.5695, lng: 88.3605, metro: "Central Metro", approx: true },
+  { name: "Ramdulal Nibas Durga Pujo", location: "Beadon Street · Bonedi bari", lat: 22.5868, lng: 88.3655, metro: "Girish Park Metro", approx: true },
+  { name: "Rani Rashmoni Barir Durga Pujo", location: "Janbazar · Bonedi bari", lat: 22.5645, lng: 88.3575, metro: "Esplanade Metro", approx: true },
+  { name: "Roychoudhury Barir Durga Pujo (Sabarna, Barisha)", location: "Barisha (Sabarna Roy Choudhury Bari) · Bonedi bari", lat: 22.486, lng: 88.317, metro: "Sakherbazar Metro", approx: true },
+  { name: "Shibkrishna Daw Barir Durga Pujo", location: "Jorasanko · Bonedi bari", lat: 22.5805, lng: 88.36, metro: "MG Road Metro", approx: true },
+  { name: "Shovabazar Rajbari (Bonedi Bari)", location: "Sovabazar · Bonedi bari", lat: 22.5958, lng: 88.364, metro: "Shovabazar Sutanuti Metro" },
+  { name: "Srimani Barir Durga Pujo", location: "Hatibagan · Bonedi bari", lat: 22.5818002, lng: 88.3738888, metro: "Girish Park Metro" },
+  { name: "Thanthania Dutta Barir Durga Pujo", location: "Thanthania · Bonedi bari", lat: 22.5755, lng: 88.363, metro: "MG Road Metro", approx: true },
+
+  // ---- Added from thepujo.com/directory · Salt Lake & surroundings ----
+  { name: "AE Block Durgotsab", location: "Sector 1, Salt Lake", lat: 22.59856, lng: 88.409409, metro: "City Centre Metro" },
+  { name: "Arjunpur Amra Sabai Club", location: "Arjunpur, Baguiati", lat: 22.616, lng: 88.434, metro: "Jessore Road Metro (Yellow Line)", approx: true },
+  { name: "Aswininagar Bandhu Mahal Club", location: "Baguiati", lat: 22.604, lng: 88.438, metro: "Central Park Metro", approx: true },
+  { name: "Dakshindari Youths", location: "South Dum Dum", lat: 22.61, lng: 88.398, metro: "Belgachia Metro", approx: true },
+  { name: "Karunamayee G Block", location: "Karunamoyee, Salt Lake", lat: 22.5825, lng: 88.427, metro: "Karunamoyee Metro", approx: true },
+  { name: "Kestopur Prafulla Kanan Paschim Adhibasi Brinda", location: "Kestopur", lat: 22.6085, lng: 88.4235, metro: "Central Park Metro", approx: true },
+  { name: "New Town Sarbojanin", location: "New Town", lat: 22.585, lng: 88.464, metro: "Salt Lake Sector V Metro", approx: true },
+  { name: "Purbachal Sarbojanin", location: "near Sector 3, Salt Lake", lat: 22.573011, lng: 88.407463, metro: "Salt Lake Stadium Metro" },
+  { name: "Salt Lake AA Block", location: "Sector 1, Salt Lake", lat: 22.5917995, lng: 88.39736, metro: "City Centre Metro" },
+  { name: "Salt Lake AB Block", location: "Sector 1, Salt Lake", lat: 22.593313, lng: 88.3997852, metro: "City Centre Metro" },
+  { name: "Salt Lake AC Block", location: "Sector 1, Salt Lake", lat: 22.5948385, lng: 88.4034229, metro: "City Centre Metro" },
+  { name: "Salt Lake AD Block", location: "Sector 1, Salt Lake", lat: 22.596855, lng: 88.406448, metro: "City Centre Metro" },
+  { name: "Salt Lake AG Block", location: "Sector 1, Salt Lake", lat: 22.598421, lng: 88.423286, metro: "Central Park Metro" },
+  { name: "Salt Lake AH Block", location: "Sector 1, Salt Lake", lat: 22.594231, lng: 88.427269, metro: "Karunamoyee Metro" },
+  { name: "Salt Lake AJ Block", location: "Sector 1, Salt Lake", lat: 22.592161, lng: 88.428291, metro: "Karunamoyee Metro" },
+  { name: "Salt Lake AK Block", location: "near Karunamoyee, Salt Lake", lat: 22.5891537, lng: 88.4313014, metro: "Salt Lake Sector V Metro" },
+  { name: "Salt Lake AL Block", location: "near Karunamoyee, Salt Lake", lat: 22.5861982, lng: 88.4337248, metro: "Salt Lake Sector V Metro" },
+  { name: "Salt Lake BA Block", location: "Sector 1, Salt Lake", lat: 22.5888325, lng: 88.3985726, metro: "City Centre Metro" },
+  { name: "Salt Lake BB Block", location: "Sector 1, Salt Lake", lat: 22.5918475, lng: 88.4022104, metro: "City Centre Metro" },
+  { name: "Salt Lake BC Block", location: "Sector 1, Salt Lake", lat: 22.5929856, lng: 88.4043323, metro: "City Centre Metro" },
+  { name: "Salt Lake BD Block", location: "Sector 1, Salt Lake", lat: 22.5948864, lng: 88.4082726, metro: "City Centre Metro" },
+  { name: "Salt Lake BE Block", location: "Sector 1, Salt Lake", lat: 22.596836, lng: 88.412193, metro: "City Centre Metro" },
+  { name: "Salt Lake BG Block", location: "Sector 2, Salt Lake", lat: 22.5953985, lng: 88.4225156, metro: "Central Park Metro" },
+  { name: "Salt Lake BH Block", location: "Sector 2, Salt Lake", lat: 22.5939268, lng: 88.4243335, metro: "Central Park Metro" },
+  { name: "Salt Lake BK Block", location: "Sector 2, Salt Lake", lat: 22.5876407, lng: 88.4288779, metro: "Salt Lake Sector V Metro" },
+  { name: "Salt Lake BL Block", location: "Sector 2, Salt Lake", lat: 22.5846852, lng: 88.4313014, metro: "Salt Lake Sector V Metro" },
+  { name: "Salt Lake CA Block", location: "Sector 1, Salt Lake", lat: 22.5869917, lng: 88.4006947, metro: "City Centre Metro" },
+  { name: "Salt Lake CB Block", location: "Sector 1, Salt Lake", lat: 22.5888806, lng: 88.4034229, metro: "City Centre Metro" },
+  { name: "Salt Lake CD Block", location: "Sector 1, Salt Lake", lat: 22.5915, lng: 88.4075, metro: "City Centre Metro", approx: true },
+  { name: "Salt Lake CG Block", location: "Sector 2, Salt Lake", lat: 22.5920383, lng: 88.4216066, metro: "Central Park Metro" },
+  { name: "Salt Lake CJ Block", location: "Sector 2, Salt Lake", lat: 22.58927, lng: 88.423599, metro: "Central Park Metro" },
+  { name: "Salt Lake CK-CL Block", location: "Sector 2, Salt Lake", lat: 22.584633, lng: 88.427864, metro: "Salt Lake Sector V Metro" },
+  { name: "Salt Lake DA Block", location: "Sector 1, Salt Lake", lat: 22.5847695, lng: 88.4019072, metro: "City Centre Metro" },
+  { name: "Salt Lake DB Block", location: "Sector 1, Salt Lake", lat: 22.5862889, lng: 88.4049385, metro: "City Centre Metro" },
+  { name: "Salt Lake DL Block", location: "Sector 2, Salt Lake", lat: 22.582136, lng: 88.425819, metro: "Salt Lake Sector V Metro" },
+  { name: "Salt Lake EC Market", location: "Sector 1, Salt Lake", lat: 22.5852613, lng: 88.4092955, metro: "City Centre Metro" },
+  { name: "Salt Lake EE Block", location: "Sector 2, Salt Lake", lat: 22.5801459, lng: 88.4240305, metro: "Salt Lake Sector V Metro" },
+  { name: "Salt Lake FC Block", location: "Sector 3, Salt Lake", lat: 22.5800034, lng: 88.409485, metro: "City Centre Metro" },
+  { name: "Salt Lake FE Block", location: "Sector 3, Salt Lake", lat: 22.5815762, lng: 88.4179705, metro: "Central Park Metro" },
+  { name: "Salt Lake GC Block", location: "Sector 3, Salt Lake", lat: 22.5785377, lng: 88.4119096, metro: "Central Park Metro" },
+  { name: "Salt Lake GD Block", location: "Sector 3, Salt Lake", lat: 22.576777, lng: 88.414162, metro: "Central Park Metro" },
+  { name: "Salt Lake HA Block", location: "Sector 3, Salt Lake", lat: 22.5755, lng: 88.4135, metro: "Salt Lake Stadium Metro", approx: true },
+  { name: "Salt Lake HB Block", location: "Sector 3, Salt Lake", lat: 22.5741049, lng: 88.4155462, metro: "Salt Lake Stadium Metro" },
+  { name: "Salt Lake IA Block", location: "Sector 3, Salt Lake", lat: 22.5715, lng: 88.411, metro: "Salt Lake Stadium Metro", approx: true },
+  { name: "Salt Lake IB Block", location: "Sector 3, Salt Lake", lat: 22.572, lng: 88.417, metro: "Salt Lake Stadium Metro", approx: true },
+  { name: "Salt Lake JC Block", location: "Sector 3, Salt Lake", lat: 22.5696125, lng: 88.4131218, metro: "Salt Lake Stadium Metro" },
+  { name: "Salt Lake Labony Estate", location: "Sector 1, Salt Lake", lat: 22.583099, lng: 88.4069754, metro: "City Centre Metro" },
+
+  // ---- Added from thepujo.com/directory · Howrah ----
+  { name: "Arupara Milan Sangha", location: "Howrah", lat: 22.597847, lng: 88.300949, metro: "Howrah Maidan Metro" },
+  { name: "Bally Chaitalpara Buri Maa (Aatchala)", location: "Bally, Howrah", lat: 22.648, lng: 88.342, metro: "Dakshineswar Metro" },
+  { name: "Belur Math Durga Puja (Kumari Puja)", location: "Belur, Howrah", lat: 22.6326, lng: 88.356, metro: "Dakshineswar Metro" },
+  { name: "Ghas Bagan Sarbojanin", location: "Howrah", lat: 22.591923, lng: 88.343468, metro: "Howrah Metro" },
+  { name: "Kamardanga Sitalatala", location: "Howrah", lat: 22.596292, lng: 88.302353, metro: "Howrah Maidan Metro" },
+  { name: "Olabibitala Sarbojanin", location: "near Shibpur, Howrah", lat: 22.575529, lng: 88.315788, metro: "Howrah Maidan Metro" },
+  { name: "Shibpur Mandirtala Sarbojanin", location: "Shibpur, Howrah", lat: 22.5715, lng: 88.3225, metro: "Howrah Maidan Metro" }
 ];
 
 
@@ -949,6 +1300,7 @@
     // Road distance: OSRM public routing (OpenStreetMap data, no API key).
     // Maps: Leaflet + OpenStreetMap tiles. Metro walk: OSM foot routing + Nominatim geocoding.
     pandals.forEach((p, i) => { p.id = i; });
+    pandals.forEach(p => { if (p.approx) p.location += ' · approx. pin'; });   // no exact coordinates on source
 
     const KOLKATA_CENTER = [22.5726, 88.3639];
     let userPos = null;            // { lat, lng }
@@ -972,15 +1324,25 @@
       }
     }
 
-    // One request: distance by road from the user to every pandal.
+    // Road distance from the user to every pandal. The public OSRM server limits a table request
+    // to ~100 coordinates, so the list is split into chunks and fetched in parallel.
     async function fetchRoadDistancesKm(lat, lng) {
-      const coords = [[lng, lat]].concat(pandals.map(p => [p.lng, p.lat]))
-        .map(c => c.join(',')).join(';');
-      const data = await fetchJson(
-        'https://router.project-osrm.org/table/v1/driving/' + coords + '?sources=0&annotations=distance'
-      );
-      if (data.code !== 'Ok' || !data.distances || !data.distances[0]) throw new Error('OSRM: ' + data.code);
-      return data.distances[0].slice(1).map(m => (typeof m === 'number' ? m / 1000 : null));
+      const CHUNK = 90;
+      const out = new Array(pandals.length).fill(null);
+      const jobs = [];
+      for (let start = 0; start < pandals.length; start += CHUNK) {
+        const slice = pandals.slice(start, start + CHUNK);
+        const coords = [[lng, lat]].concat(slice.map(p => [p.lng, p.lat]))
+          .map(c => c.join(',')).join(';');
+        jobs.push(fetchJson(
+          'https://router.project-osrm.org/table/v1/driving/' + coords + '?sources=0&annotations=distance'
+        ).then(data => {
+          if (data.code !== 'Ok' || !data.distances || !data.distances[0]) throw new Error('OSRM: ' + data.code);
+          data.distances[0].slice(1).forEach((m, k) => { out[start + k] = (typeof m === 'number' ? m / 1000 : null); });
+        }));
+      }
+      await Promise.all(jobs);
+      return out;
     }
 
     function applyDistances(roadKm) {
@@ -1211,6 +1573,7 @@
 
         pujoLayer = L.layerGroup().addTo(sharedMap);
         dotLayer = L.layerGroup();
+        tripLayer = L.layerGroup();
         pandals.forEach(p => {
           const m = L.marker([p.lat, p.lng], { icon: pinIcon('pujo') });
           m.bindTooltip(p.name, { direction: 'top' });
@@ -1228,16 +1591,14 @@
       }
 
       // metro-station pins only belong on the Metro tab
-      if (key === 'metro') {
-        if (sharedMap.hasLayer(pujoLayer)) sharedMap.removeLayer(pujoLayer);
-        if (!sharedMap.hasLayer(dotLayer)) dotLayer.addTo(sharedMap);
-        if (!sharedMap.hasLayer(stationLayer)) stationLayer.addTo(sharedMap);
-        loadStationPins();
-      } else {
-        if (sharedMap.hasLayer(stationLayer)) sharedMap.removeLayer(stationLayer);
-        if (sharedMap.hasLayer(dotLayer)) sharedMap.removeLayer(dotLayer);
-        if (!sharedMap.hasLayer(pujoLayer)) pujoLayer.addTo(sharedMap);
-      }
+      // each tab owns its own set of layers
+      [[pujoLayer, key === 'parikrama'], [dotLayer, key === 'metro'],
+       [stationLayer, key === 'metro'], [tripLayer, key === 'trip']].forEach(function (pair) {
+        const layer = pair[0], wanted = pair[1];
+        if (wanted && !sharedMap.hasLayer(layer)) layer.addTo(sharedMap);
+        if (!wanted && sharedMap.hasLayer(layer)) sharedMap.removeLayer(layer);
+      });
+      if (key === 'metro') loadStationPins();
 
       // The map was hidden until now, so re-measure it, then show this tab's own state
       setTimeout(() => {
@@ -1245,6 +1606,7 @@
         sharedMap.closePopup();
         clearOverlays(MAPS.parikrama);
         clearOverlays(MAPS.metro);
+        if (key === 'trip') { drawTrip(); return; }
         const S = MAPS[key];
         if (S.selected !== null) {
           selectPandal(key, S.selected, false);
@@ -1301,7 +1663,8 @@
         (userPos ? '&origin=' + userPos.lat + ',' + userPos.lng : '') +
         '&destination=' + p.lat + ',' + p.lng + '&travelmode=driving';
       const html = (extra) => '<b>' + escapeHtml(p.name) + '</b><br>' + escapeHtml(p.location) + extra +
-        '<br><a href="' + dir + '" target="_blank" rel="noopener">Directions ↗</a>';
+        '<br><a href="' + dir + '" target="_blank" rel="noopener">Directions ↗</a>' +
+        ' · <a href="#" onclick="addToTrip(' + p.id + '); return false;">+ Add to trip</a>';
 
       if (!userPos) {
         m.bindPopup(html('<br><i>Allow location to see the road route</i>'), { maxWidth: 220 }).openPopup();
@@ -1361,7 +1724,8 @@
       const dir = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(stationName + ', Kolkata') +
         '&destination=' + p.lat + ',' + p.lng + '&travelmode=walking';
       const base = '<b>' + escapeHtml(p.name) + '</b><br>Nearest metro: ' + escapeHtml(p.metro);
-      const link = '<br><a href="' + dir + '" target="_blank" rel="noopener">Walking directions ↗</a>';
+      const link = '<br><a href="' + dir + '" target="_blank" rel="noopener">Walking directions ↗</a>' +
+        ' · <a href="#" onclick="addToTrip(' + p.id + '); return false;">+ Add to trip</a>';
 
       m.bindPopup(base + '<br><i>Finding walking route…</i>', { maxWidth: 230 }).openPopup();
       focusPoint(S, p);
@@ -1404,6 +1768,388 @@
         formatDist(w.km) + ' walk · ~' + w.mins + ' min</span></span>' : '';
     }
 
+
+    // ================= Trip planner =================
+    const TRIP_KEY = 'sharadiya_trip_v1';
+    const trip = { stops: [], sub: 'add', useMe: false, legs: null, legsRoad: false };
+    let tripLayer = null;
+    let tripToken = 0;
+    let tripDrawTimer = null;
+    let tripNoteText = '';
+    let tripNoteTimer = null;
+    let toastTimer = null;
+
+    function loadTrip() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(TRIP_KEY) || 'null');
+        if (saved && Array.isArray(saved.stops)) {
+          trip.stops = saved.stops.filter((id, i, arr) => Number.isInteger(id) && pandals[id] && arr.indexOf(id) === i);
+        }
+      } catch (e) {}
+      trip.sub = trip.stops.length ? 'plan' : 'add';
+    }
+    function saveTrip() {
+      try { localStorage.setItem(TRIP_KEY, JSON.stringify({ stops: trip.stops })); } catch (e) {}
+    }
+
+    function showToast(msg) {
+      let el = document.getElementById('toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast';
+        el.className = 'toast';
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function setTripNote(msg) {
+      tripNoteText = msg;
+      clearTimeout(tripNoteTimer);
+      tripNoteTimer = setTimeout(() => { tripNoteText = ''; updateTripSummary(); }, 3500);
+      updateTripSummary();
+    }
+
+    function tripMeOn() { return trip.useMe && !!userPos; }
+
+    // the route's points in order: optional start (you) + every stop
+    function tripPoints() {
+      const pts = [];
+      if (tripMeOn()) pts.push({ label: 'You', lat: userPos.lat, lng: userPos.lng, me: true });
+      trip.stops.forEach(id => pts.push({ label: pandals[id].name, lat: pandals[id].lat, lng: pandals[id].lng, id: id }));
+      return pts;
+    }
+
+    function afterTripChange() {
+      trip.legs = null;
+      saveTrip();
+      renderTrip();
+      clearTimeout(tripDrawTimer);
+      tripDrawTimer = setTimeout(drawTrip, 250);
+    }
+
+    function addToTrip(id) {
+      if (trip.stops.indexOf(id) !== -1) { showToast(pandals[id].name + ' is already in your trip'); return; }
+      trip.stops.push(id);
+      showToast('Added ' + pandals[id].name + ' · ' + trip.stops.length + (trip.stops.length === 1 ? ' stop' : ' stops'));
+      afterTripChange();
+    }
+    function removeStop(i) {
+      trip.stops.splice(i, 1);
+      afterTripChange();
+    }
+    function moveStop(i, dir) {
+      const j = i + dir;
+      if (j < 0 || j >= trip.stops.length) return;
+      const tmp = trip.stops[i]; trip.stops[i] = trip.stops[j]; trip.stops[j] = tmp;
+      afterTripChange();
+    }
+    function toggleTripStop(id) {
+      const i = trip.stops.indexOf(id);
+      if (i === -1) addToTrip(id); else removeStop(i);
+    }
+    function clearTrip() {
+      if (!trip.stops.length) return;
+      if (!window.confirm('Remove all stops from your trip?')) return;
+      trip.stops = [];
+      trip.sub = 'add';
+      afterTripChange();
+    }
+    function setTripSub(sub) {
+      trip.sub = sub;
+      renderTrip();
+    }
+
+    function toggleUseMe() {
+      if (trip.useMe) { trip.useMe = false; afterTripChange(); return; }
+      if (userPos) { trip.useMe = true; afterTripChange(); return; }
+      if (!('geolocation' in navigator)) { setTripNote('Location isn’t available on this device'); return; }
+      setTripNote('Finding your location…');
+      navigator.geolocation.getCurrentPosition(function (position) {
+        userPos = { lat: position.coords.latitude, lng: position.coords.longitude };
+        updateUserMarker();
+        trip.useMe = true;
+        setTripNote('Starting from your location');
+        afterTripChange();
+      }, function () {
+        setTripNote('Couldn’t get your location — check the browser permission');
+      }, { timeout: 10000, maximumAge: 60000 });
+    }
+
+    function focusTripStop(id) {
+      if (!sharedMap) return;
+      const p = pandals[id];
+      sharedMap.fitBounds([[p.lat, p.lng]], Object.assign({ maxZoom: 16 }, mapPad()));
+    }
+
+    // ---- ordering: nearest-next, starting from you (if on) or the first stop ----
+    function greedyOrder(d) {
+      const n = d.length, order = [0], seen = new Set([0]);
+      while (order.length < n) {
+        const last = order[order.length - 1];
+        let best = -1, bd = Infinity;
+        for (let j = 0; j < n; j++) {
+          if (!seen.has(j) && d[last][j] < bd) { bd = d[last][j]; best = j; }
+        }
+        if (best < 0) { for (let j = 0; j < n; j++) { if (!seen.has(j)) { best = j; break; } } }
+        order.push(best); seen.add(best);
+      }
+      return order;
+    }
+
+    async function optimiseTrip() {
+      if (trip.stops.length < 2) return;
+      const pts = tripPoints();
+      setTripNote('Finding a shorter order…');
+      let d;
+      try {
+        const coords = pts.map(p => p.lng + ',' + p.lat).join(';');
+        const res = await fetchJson('https://router.project-osrm.org/table/v1/driving/' + coords + '?annotations=distance', 12000);
+        if (res.code !== 'Ok' || !res.distances) throw new Error('table');
+        d = res.distances.map((row, i) => row.map((m, j) => typeof m === 'number'
+          ? m / 1000 : getDistanceFromLatLonInKm(pts[i].lat, pts[i].lng, pts[j].lat, pts[j].lng)));
+      } catch (e) {
+        d = pts.map(a => pts.map(b => getDistanceFromLatLonInKm(a.lat, a.lng, b.lat, b.lng)));
+      }
+      const order = greedyOrder(d);
+      trip.stops = order.filter(i => !pts[i].me).map(i => pts[i].id);
+      setTripNote(pts[0].me ? 'Reordered — nearest stop first, starting from you'
+                            : 'Reordered — nearest next, keeping your first stop as the start');
+      afterTripChange();
+    }
+
+    // ---- sharing ----
+    function tripMapsUrl() {
+      const pts = tripPoints();
+      if (pts.length < 2) return null;
+      const f = p => p.lat + ',' + p.lng;
+      const middle = pts.slice(1, -1);
+      const mid = middle.slice(0, 9).map(f).join('|');
+      if (middle.length > 9) setTripNote('Google Maps takes up to 9 middle stops — the link leaves out the extras');
+      return 'https://www.google.com/maps/dir/?api=1&origin=' + f(pts[0]) + '&destination=' + f(pts[pts.length - 1]) +
+        (mid ? '&waypoints=' + encodeURIComponent(mid) : '') + '&travelmode=driving';
+    }
+
+    function openTripInMaps() {
+      const url = tripMapsUrl();
+      if (url) window.open(url, '_blank', 'noopener');
+    }
+
+    function copyTripPlan() {
+      if (!trip.stops.length) return;
+      const pts = tripPoints();
+      const meOn = tripMeOn();
+      const lines = ['My Pujo trip (sharadiya.diy)', ''];
+      trip.stops.forEach((id, s) => {
+        const p = pandals[id];
+        const legIdx = s - 1 + (meOn ? 1 : 0);
+        if (legIdx >= 0 && trip.legs && trip.legs[legIdx] != null) {
+          lines.push('   ↓ ' + formatDist(trip.legs[legIdx]) + (trip.legsRoad ? ' by road' : ' straight-line'));
+        }
+        lines.push((s + 1) + '. ' + p.name + ' (' + p.location + ') — Metro: ' + p.metro);
+      });
+      const url = tripMapsUrl();
+      if (url) lines.push('', 'Route: ' + url);
+      const text = lines.join('\n');
+      const done = () => showToast('Trip plan copied');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, () => window.prompt('Copy your trip plan:', text));
+      } else {
+        window.prompt('Copy your trip plan:', text);
+      }
+    }
+
+    // ---- rendering the panel ----
+    function tripTotalKm() {
+      return trip.legs ? trip.legs.reduce((a, b) => a + b, 0) : null;
+    }
+
+    function updateTripSummary() {
+      const el = document.getElementById('tripSummary');
+      if (!el) return;
+      const n = trip.stops.length;
+      const total = tripTotalKm();
+      let text;
+      if (tripNoteText) text = tripNoteText;
+      else if (!n) text = 'Plan your pandal hopping — add the pandals you want to visit, then arrange the order.';
+      else if (total !== null) text = n + (n === 1 ? ' stop' : ' stops') + ' · ' + formatDist(total) + (trip.legsRoad ? ' by road' : ' straight-line') + ' in total';
+      else text = n + (n === 1 ? ' stop' : ' stops') + (tripPoints().length < 2 ? ' — add one more to see the route' : '');
+      el.textContent = text;
+    }
+
+    function renderTrip() {
+      const n = trip.stops.length;
+      const tabPlan = document.getElementById('tripTabPlan');
+      const tabAdd = document.getElementById('tripTabAdd');
+      if (!tabPlan) return;
+      tabPlan.textContent = 'My trip (' + n + ')';
+      tabPlan.classList.toggle('on', trip.sub === 'plan');
+      tabAdd.classList.toggle('on', trip.sub === 'add');
+      document.getElementById('tripPlanBox').style.display = trip.sub === 'plan' ? 'block' : 'none';
+      document.getElementById('tripAddBox').style.display = trip.sub === 'add' ? 'block' : 'none';
+      updateTripSummary();
+      if (trip.sub === 'plan') renderTripPlan(); else renderTripAdd();
+    }
+
+    function renderTripPlan() {
+      const pts = tripPoints();
+      const meOn = tripMeOn();
+      const n = trip.stops.length;
+
+      document.getElementById('tripActions').innerHTML =
+        '<button type="button" class="chip' + (trip.useMe ? ' on' : '') + '" onclick="toggleUseMe()">Start from my location</button>' +
+        '<button type="button" class="chip" onclick="optimiseTrip()"' + (n < 2 ? ' disabled' : '') + '>Best order</button>' +
+        '<button type="button" class="chip" onclick="openTripInMaps()"' + (pts.length < 2 ? ' disabled' : '') + '>Open in Maps</button>' +
+        '<button type="button" class="chip" onclick="copyTripPlan()"' + (n < 1 ? ' disabled' : '') + '>Copy plan</button>' +
+        '<button type="button" class="chip" onclick="clearTrip()"' + (n < 1 ? ' disabled' : '') + '>Clear</button>';
+
+      const box = document.getElementById('tripStops');
+      if (!n) {
+        box.innerHTML = '<div class="trip-empty">No stops yet. Tap “+ Add pandals” to choose where you want to go.</div>';
+        return;
+      }
+      box.innerHTML = trip.stops.map((id, s) => {
+        const p = pandals[id];
+        const legIdx = s - 1 + (meOn ? 1 : 0);
+        let leg = '';
+        if (legIdx >= 0 && pts[legIdx + 1]) {
+          const a = pts[legIdx], b = pts[legIdx + 1];
+          const km = trip.legs && trip.legs[legIdx] != null ? trip.legs[legIdx] : null;
+          const dist = km === null ? 'Calculating…' : formatDist(km) + (trip.legsRoad ? ' by road' : ' straight-line');
+          const base = 'https://www.google.com/maps/dir/?api=1&origin=' + a.lat + ',' + a.lng + '&destination=' + b.lat + ',' + b.lng + '&travelmode=';
+          leg = '<div class="trip-leg">↓ ' + (a.me ? 'From your location · ' : '') + dist +
+            ' · <a href="' + base + 'transit" target="_blank" rel="noopener">By metro / transit ↗</a>' +
+            ' · <a href="' + base + 'driving" target="_blank" rel="noopener">Drive ↗</a></div>';
+        }
+        return leg + `
+        <div class="pandal-card selectable trip-stop" onclick="focusTripStop(${id})">
+          <div class="trip-badge">${s + 1}</div>
+          <div class="trip-body">
+            <h4>${p.name}</h4>
+            <p>${p.location}<br><span style="color:var(--accent-gold); font-weight:600;">Nearest Metro:</span> ${p.metro}</p>
+          </div>
+          <div class="trip-ctl">
+            <button type="button" class="icon-btn" aria-label="Move up" onclick="event.stopPropagation(); moveStop(${s}, -1)"${s === 0 ? ' disabled' : ''}>▲</button>
+            <button type="button" class="icon-btn" aria-label="Move down" onclick="event.stopPropagation(); moveStop(${s}, 1)"${s === n - 1 ? ' disabled' : ''}>▼</button>
+            <button type="button" class="icon-btn" aria-label="Remove" onclick="event.stopPropagation(); removeStop(${s})">×</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderTripAdd() {
+      const q = document.getElementById('tripSearch').value;
+      let list = filterPandals(pandals, q);
+      const haveDist = typeof pandals[0].distance === 'number' && userPos;
+      list = list.slice().sort(haveDist
+        ? (a, b) => a.distance - b.distance
+        : (a, b) => a.name.localeCompare(b.name));
+      document.getElementById('tripAddList').innerHTML = list.length ? list.map(p => {
+        const inTrip = trip.stops.indexOf(p.id) !== -1;
+        const dist = haveDist ? ' · ' + formatDist(p.distance) + (p.isRoad ? ' by road' : '') : '';
+        return `
+        <div class="pandal-card selectable${inTrip ? ' selected' : ''}" onclick="toggleTripStop(${p.id})">
+          <div>
+            <h4>${p.name}</h4>
+            <p>${p.location}${dist}<br><span style="color:var(--accent-gold); font-weight:600;">Metro:</span> ${p.metro}</p>
+          </div>
+          <span class="chip${inTrip ? ' on' : ''}">${inTrip ? 'Added ✓' : '+ Add'}</span>
+        </div>`;
+      }).join('') : emptyResultHtml(q);
+    }
+
+    // ---- drawing the trip on the map ----
+    function tripNumIcon(n) {
+      return L.divIcon({
+        className: 'trip-num-wrap', html: '<div class="trip-num">' + n + '</div>',
+        iconSize: [30, 30], iconAnchor: [15, 15]
+      });
+    }
+
+    function stationMarkerFor(core, pos) {
+      const m = L.marker([pos.lat, pos.lng], { icon: pinIcon('metro') });
+      m.bindTooltip(core + ' Metro', { direction: 'top' });
+      m.bindPopup('<b>' + escapeHtml(core) + ' Metro</b><br><a href="https://www.google.com/maps/search/?api=1&query=' +
+        encodeURIComponent(core + ' Metro, Kolkata') + '" target="_blank" rel="noopener">Open in Maps ↗</a>', { maxWidth: 220 });
+      return m;
+    }
+
+    // train pins for the stations nearest to your stops (looked up politely, then cached)
+    async function addTripStations(token) {
+      const cores = Array.from(new Set(trip.stops.map(id => stationCore(pandals[id].metro))));
+      for (const core of cores) {
+        if (token !== tripToken) return;
+        const cached = !!geoCache[core];
+        try {
+          const pos = await geocodeStation(core);
+          if (token !== tripToken) return;
+          if (pos) stationMarkerFor(core, pos).addTo(tripLayer);
+        } catch (e) { console.warn('Trip station lookup failed:', core, e); }
+        if (!cached) await new Promise(r => setTimeout(r, 1100));
+      }
+    }
+
+    function fitTrip(pts) {
+      if (!sharedMap || !pts.length) return;
+      sharedMap.fitBounds(pts.map(p => [p.lat, p.lng]), Object.assign({ maxZoom: 15 }, mapPad()));
+    }
+
+    async function drawTrip() {
+      if (!sharedMap || !tripLayer || activeMapKey !== 'trip') return;
+      const token = ++tripToken;
+      tripLayer.clearLayers();
+      const pts = tripPoints();
+
+      let num = 0;
+      pts.forEach(pt => {
+        if (pt.me) {
+          L.circleMarker([pt.lat, pt.lng], { radius: 7, color: '#fff', weight: 3, fillColor: '#2f80ed', fillOpacity: 1 })
+            .addTo(tripLayer).bindTooltip('Start: your location');
+        } else {
+          num++;
+          L.marker([pt.lat, pt.lng], { icon: tripNumIcon(num), zIndexOffset: 500 })
+            .addTo(tripLayer).bindTooltip(num + '. ' + pt.label, { direction: 'top', offset: [0, -14] });
+        }
+      });
+      addTripStations(token);
+
+      if (pts.length < 2) {
+        trip.legs = null;
+        updateTripSummary();
+        fitTrip(pts);
+        return;
+      }
+
+      let geometry, legs, road = false;
+      try {
+        const coords = pts.map(p => p.lng + ',' + p.lat).join(';');
+        const d = await fetchJson('https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson', 12000);
+        const r = d.routes && d.routes[0];
+        if (!r || !r.legs || r.legs.length !== pts.length - 1) throw new Error('no route');
+        geometry = r.geometry;
+        legs = r.legs.map(l => l.distance / 1000);
+        road = true;
+      } catch (err) {
+        console.warn('Trip route unavailable, using straight lines:', err);
+        geometry = { type: 'LineString', coordinates: pts.map(p => [p.lng, p.lat]) };
+        legs = pts.slice(1).map((p, i) => getDistanceFromLatLonInKm(pts[i].lat, pts[i].lng, p.lat, p.lng));
+      }
+      if (token !== tripToken) return;
+
+      L.geoJSON(geometry, { style: { color: '#fff', weight: 8, opacity: 0.9 } }).addTo(tripLayer);
+      L.geoJSON(geometry, { style: { color: '#A91D22', weight: 5, opacity: 0.95, dashArray: road ? null : '6 8', lineCap: 'round' } }).addTo(tripLayer);
+
+      trip.legs = legs;
+      trip.legsRoad = road;
+      renderTrip();
+      fitTrip(pts);
+    }
+
+    loadTrip();
+    renderTrip();
 
     // ---- Search helpers (Pandals + Metro tabs) ----
     let currentPandalList = pandals; // last list shown (keeps the nearest-first order after location loads)
