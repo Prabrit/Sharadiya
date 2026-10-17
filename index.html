@@ -442,6 +442,18 @@
       background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;
     }
     .icon-btn:hover { background: rgba(255,255,255,0.22); }
+    .trip-stop.next { border-color: #D4AF37; box-shadow: 0 0 0 1px rgba(212,175,55,0.55); }
+    .next-tag {
+      display: inline-block; font-size: 0.6rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+      background: #D4AF37; color: #2a1215; border-radius: 8px; padding: 1px 6px; margin-right: 6px; vertical-align: middle;
+    }
+    .icon-btn.done { background: rgba(60,170,90,0.35); }
+    .icon-btn.done:hover { background: rgba(60,170,90,0.6); }
+    .trip-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; }
+    .trip-visited { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--glass-border); }
+    .trip-visited-h { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+    .trip-visited-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8rem; padding: 3px 0; opacity: .8; }
+    .trip-visited-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .trip-leg { font-size: 0.74rem; color: var(--text-muted); margin: -2px 0 8px 36px; }
     .trip-leg a { color: var(--accent-gold); text-decoration: none; font-weight: 600; }
     .trip-empty { text-align: center; padding: 16px 8px; font-size: 0.82rem; color: var(--text-muted); }
@@ -595,7 +607,7 @@
       </div>
     </div>
 
-    <div class="footer">Made by prabrit with love ❤️ v2.1</div>
+    <div class="footer">Made by prabrit with love ❤️ v2.7</div>
   </div>
 
   <div class="drawer" id="playlistDrawer">
@@ -880,7 +892,7 @@
             nabami = dateKey(D.nabami), dashami = dateKey(D.dashami);
 
       if (today === mahalaya) return '🙏 শুভ মহালয়া';
-      if (today === shashthi) return 'আজ ষষ্ঠী';
+      if (today === shashthi) return 'আজ মহাসপ্তমী';
       if (today === saptami)  return 'আজ মহাসপ্তমী';
       if (today === ashtami)  return 'আজ মহাষ্টমী';
       if (today === nabami)   return 'আজ মহানবমী';
@@ -1771,7 +1783,7 @@
 
     // ================= Trip planner =================
     const TRIP_KEY = 'sharadiya_trip_v1';
-    const trip = { stops: [], sub: 'add', useMe: false, legs: null, legsRoad: false };
+    const trip = { stops: [], visited: [], auto: false, sub: 'add', useMe: false, legs: null, legsRoad: false };
     let tripLayer = null;
     let tripToken = 0;
     let tripDrawTimer = null;
@@ -1784,12 +1796,16 @@
         const saved = JSON.parse(localStorage.getItem(TRIP_KEY) || 'null');
         if (saved && Array.isArray(saved.stops)) {
           trip.stops = saved.stops.filter((id, i, arr) => Number.isInteger(id) && pandals[id] && arr.indexOf(id) === i);
+          if (Array.isArray(saved.visited)) {
+            trip.visited = saved.visited.filter((id, i, arr) => Number.isInteger(id) && pandals[id] && arr.indexOf(id) === i && trip.stops.indexOf(id) === -1);
+          }
+          trip.auto = !!saved.auto;
         }
       } catch (e) {}
       trip.sub = trip.stops.length ? 'plan' : 'add';
     }
     function saveTrip() {
-      try { localStorage.setItem(TRIP_KEY, JSON.stringify({ stops: trip.stops })); } catch (e) {}
+      try { localStorage.setItem(TRIP_KEY, JSON.stringify({ stops: trip.stops, visited: trip.visited, auto: trip.auto })); } catch (e) {}
     }
 
     function showToast(msg) {
@@ -1825,6 +1841,7 @@
 
     function afterTripChange() {
       trip.legs = null;
+      if (trip.auto && trip.stops.length) startTripWatch(); else if (!trip.stops.length) stopTripWatch();
       saveTrip();
       renderTrip();
       clearTimeout(tripDrawTimer);
@@ -1834,6 +1851,8 @@
     function addToTrip(id) {
       if (trip.stops.indexOf(id) !== -1) { showToast(pandals[id].name + ' is already in your trip'); return; }
       trip.stops.push(id);
+      const vi = trip.visited.indexOf(id);
+      if (vi !== -1) trip.visited.splice(vi, 1);
       showToast('Added ' + pandals[id].name + ' · ' + trip.stops.length + (trip.stops.length === 1 ? ' stop' : ' stops'));
       afterTripChange();
     }
@@ -1852,15 +1871,80 @@
       if (i === -1) addToTrip(id); else removeStop(i);
     }
     function clearTrip() {
-      if (!trip.stops.length) return;
-      if (!window.confirm('Remove all stops from your trip?')) return;
+      if (!trip.stops.length && !trip.visited.length) return;
+      if (!window.confirm('Remove all stops (and the visited list) from your trip?')) return;
       trip.stops = [];
+      trip.visited = [];
       trip.sub = 'add';
       afterTripChange();
     }
     function setTripSub(sub) {
       trip.sub = sub;
       renderTrip();
+    }
+
+    // ---- visited stops: leave the list, next stop becomes the primary ----
+    function markVisited(i, auto) {
+      const id = trip.stops[i];
+      if (id === undefined) return;
+      trip.stops.splice(i, 1);
+      if (trip.visited.indexOf(id) === -1) trip.visited.push(id);
+      // if you're routing from your location, restart the route from where you are now
+      if (trip.useMe && tripFix) { userPos = { lat: tripFix.lat, lng: tripFix.lng }; updateUserMarker(); }
+      tripNearId = null;
+      const next = trip.stops[0];
+      showToast((auto ? 'Reached ' : 'Visited ') + pandals[id].name +
+        (next !== undefined ? ' · Next: ' + pandals[next].name : ' · That was your last stop 🎉'));
+      afterTripChange();
+    }
+    function restoreVisited(id) {
+      const vi = trip.visited.indexOf(id);
+      if (vi === -1) return;
+      trip.visited.splice(vi, 1);
+      if (trip.stops.indexOf(id) === -1) trip.stops.unshift(id);   // back in front: it is the next stop again
+      afterTripChange();
+    }
+
+    // ---- optional auto-detect: stay within ~80 m of the NEXT stop for ~15 s and it is marked visited ----
+    const VISIT_RADIUS_M = 80, VISIT_DWELL_MS = 15000, VISIT_MAX_ACC_M = 100;
+    let tripWatchId = null, tripCheckTimer = null, tripFix = null, tripNearId = null, tripNearSince = 0;
+
+    function startTripWatch() {
+      if (tripWatchId !== null || !('geolocation' in navigator)) return;
+      tripWatchId = navigator.geolocation.watchPosition(function (pos) {
+        tripFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy, t: Date.now() };
+      }, function () {
+        setTripNote('Auto-detect needs location permission');
+      }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 });
+      // a timer (not the GPS callback) does the dwell check, because standing still may produce no new fixes
+      tripCheckTimer = setInterval(tripAutoCheck, 5000);
+    }
+    function stopTripWatch() {
+      if (tripWatchId !== null && 'geolocation' in navigator) navigator.geolocation.clearWatch(tripWatchId);
+      clearInterval(tripCheckTimer);
+      tripWatchId = null; tripCheckTimer = null; tripNearId = null;
+    }
+    function tripAutoCheck() {
+      if (!trip.auto || !trip.stops.length || !tripFix) return;
+      if (Date.now() - tripFix.t > 60000 || tripFix.acc > VISIT_MAX_ACC_M) { tripNearId = null; return; }
+      const id = trip.stops[0], p = pandals[id];
+      if (p.approx) return;                       // pin is only approximate → manual ✓ only
+      const d = getDistanceFromLatLonInKm(tripFix.lat, tripFix.lng, p.lat, p.lng) * 1000;
+      if (d > VISIT_RADIUS_M) { if (tripNearId === id) tripNearId = null; return; }
+      if (tripNearId !== id) { tripNearId = id; tripNearSince = Date.now(); return; }
+      if (Date.now() - tripNearSince >= VISIT_DWELL_MS) markVisited(0, true);
+    }
+    function toggleAutoVisit() {
+      if (trip.auto) {
+        trip.auto = false; stopTripWatch(); saveTrip(); renderTrip();
+        setTripNote('Auto-detect off · use ✓ to mark stops visited');
+        return;
+      }
+      if (!('geolocation' in navigator)) { setTripNote('Location isn’t available on this device'); return; }
+      trip.auto = true; saveTrip();
+      if (trip.stops.length) startTripWatch();
+      renderTrip();
+      setTripNote('Auto-detect on · a stop is marked visited when you stay within ~80 m for 15 s');
     }
 
     function toggleUseMe() {
@@ -1974,9 +2058,11 @@
       const total = tripTotalKm();
       let text;
       if (tripNoteText) text = tripNoteText;
+      else if (!n && trip.visited.length) text = 'All ' + trip.visited.length + ' stops visited 🎉';
       else if (!n) text = 'Plan your pandal hopping — add the pandals you want to visit, then arrange the order.';
       else if (total !== null) text = n + (n === 1 ? ' stop' : ' stops') + ' · ' + formatDist(total) + (trip.legsRoad ? ' by road' : ' straight-line') + ' in total';
       else text = n + (n === 1 ? ' stop' : ' stops') + (tripPoints().length < 2 ? ' — add one more to see the route' : '');
+      if (n && trip.visited.length && !tripNoteText) text += ' · ' + trip.visited.length + ' visited';
       el.textContent = text;
     }
 
@@ -2001,14 +2087,22 @@
 
       document.getElementById('tripActions').innerHTML =
         '<button type="button" class="chip' + (trip.useMe ? ' on' : '') + '" onclick="toggleUseMe()">Start from my location</button>' +
+        '<button type="button" class="chip' + (trip.auto ? ' on' : '') + '" onclick="toggleAutoVisit()">Auto-detect visits</button>' +
         '<button type="button" class="chip" onclick="optimiseTrip()"' + (n < 2 ? ' disabled' : '') + '>Best order</button>' +
         '<button type="button" class="chip" onclick="openTripInMaps()"' + (pts.length < 2 ? ' disabled' : '') + '>Open in Maps</button>' +
         '<button type="button" class="chip" onclick="copyTripPlan()"' + (n < 1 ? ' disabled' : '') + '>Copy plan</button>' +
-        '<button type="button" class="chip" onclick="clearTrip()"' + (n < 1 ? ' disabled' : '') + '>Clear</button>';
+        '<button type="button" class="chip" onclick="clearTrip()"' + (n < 1 && !trip.visited.length ? ' disabled' : '') + '>Clear</button>';
 
       const box = document.getElementById('tripStops');
+      const visitedHtml = trip.visited.length
+        ? '<div class="trip-visited"><div class="trip-visited-h">Visited (' + trip.visited.length + ')</div>' +
+          trip.visited.map(id => '<div class="trip-visited-row"><span>✓ ' + pandals[id].name + '</span>' +
+            '<button type="button" class="chip" onclick="restoreVisited(' + id + ')">Undo</button></div>').join('') + '</div>'
+        : '';
       if (!n) {
-        box.innerHTML = '<div class="trip-empty">No stops yet. Tap “+ Add pandals” to choose where you want to go.</div>';
+        box.innerHTML = (trip.visited.length
+          ? '<div class="trip-empty">All stops visited 🎉 Tap “+ Add pandals” to plan more.</div>'
+          : '<div class="trip-empty">No stops yet. Tap “+ Add pandals” to choose where you want to go.</div>') + visitedHtml;
         return;
       }
       box.innerHTML = trip.stops.map((id, s) => {
@@ -2025,19 +2119,21 @@
             ' · <a href="' + base + 'driving" target="_blank" rel="noopener">Drive ↗</a></div>';
         }
         return leg + `
-        <div class="pandal-card selectable trip-stop" onclick="focusTripStop(${id})">
+        <div class="pandal-card selectable trip-stop${s === 0 ? ' next' : ''}" onclick="focusTripStop(${id})">
           <div class="trip-badge">${s + 1}</div>
           <div class="trip-body">
-            <h4>${p.name}</h4>
+            <h4>${s === 0 ? '<span class="next-tag">Next</span>' : ''}${p.name}</h4>
             <p>${p.location}<br><span style="color:var(--accent-gold); font-weight:600;">Nearest Metro:</span> ${p.metro}</p>
+            ${s === 0 && trip.auto && p.approx ? '<div class="trip-hint">Exact spot unknown — tap ✓ when you’ve visited.</div>' : ''}
           </div>
           <div class="trip-ctl">
+            <button type="button" class="icon-btn done" aria-label="Mark visited" title="Mark as visited" onclick="event.stopPropagation(); markVisited(${s})">✓</button>
             <button type="button" class="icon-btn" aria-label="Move up" onclick="event.stopPropagation(); moveStop(${s}, -1)"${s === 0 ? ' disabled' : ''}>▲</button>
             <button type="button" class="icon-btn" aria-label="Move down" onclick="event.stopPropagation(); moveStop(${s}, 1)"${s === n - 1 ? ' disabled' : ''}>▼</button>
             <button type="button" class="icon-btn" aria-label="Remove" onclick="event.stopPropagation(); removeStop(${s})">×</button>
           </div>
         </div>`;
-      }).join('');
+      }).join('') + visitedHtml;
     }
 
     function renderTripAdd() {
@@ -2150,6 +2246,7 @@
 
     loadTrip();
     renderTrip();
+    if (trip.auto && trip.stops.length) startTripWatch();
 
     // ---- Search helpers (Pandals + Metro tabs) ----
     let currentPandalList = pandals; // last list shown (keeps the nearest-first order after location loads)
